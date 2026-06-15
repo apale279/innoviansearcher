@@ -21,9 +21,13 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
 2. **Passo 1 – Scegli le cartelle**
    - Seleziona *Diarie mediche (1 cartella)* oppure *Diarie infermieristiche
      (2 cartelle)*.
-   - Premi sul selettore e scegli la **cartella che contiene le cartelle dei
-     pazienti** (`COGNOME_SDO`). Il browser chiederà conferma a leggere la
-     cartella: accetta. Comparirà subito il numero di pazienti e di PDF trovati.
+   - Premi **"Scegli cartella…"** e seleziona la **cartella che contiene le
+     cartelle dei pazienti** (`COGNOME_SDO`) — ad esempio la cartella `Daily`,
+     anche se si trova su un **disco di rete**. Il browser chiederà conferma a
+     leggere la cartella: accetta. Comparirà subito il numero di pazienti.
+   - Con **Chrome** o **Edge** l'app apre le cartelle solo quando serve: ideale
+     per migliaia di cartelle su rete. Con altri browser (es. Firefox) usa una
+     modalità compatibile che funziona comunque.
 3. **Passo 2 – Imposta la ricerca**
    - Scrivi i **termini** separati da virgola (es. `febbre, tosse`).
    - Scegli **OR** (almeno un termine) o **AND** (tutti i termini nello stesso
@@ -45,12 +49,15 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
      scheda.
    - Con **"Esporta risultati (CSV)"** salvi l'elenco (apribile in Excel).
 
-### Consigli con tante cartelle (es. 4000 PDF)
+### Consigli con tante cartelle (es. 4000+ cartelle su disco di rete)
 
-- La ricerca **non blocca** più il browser: legge i PDF in parallelo e mostra i
+- Usa **Chrome** o **Edge**: l'app apre e legge le cartelle **una alla volta,
+  solo quando servono**, senza caricare in memoria l'intero archivio.
+- La ricerca **non blocca** il browser: legge i PDF in parallelo e mostra i
   risultati mentre procede.
-- Se conosci gli **SDO** da controllare, incollali nel filtro: l'app legge
-  **solo** quei pazienti ed è enormemente più veloce.
+- Se conosci gli **SDO** da controllare, incollali nel filtro: l'app apre e
+  legge **solo** quelle cartelle ed è enormemente più veloce (decine di cartelle
+  invece di migliaia).
 - Lasciando attivo **"Fermati al primo PDF positivo"**, appena un paziente
   risulta positivo l'app salta i suoi PDF restanti.
 - Dopo la prima lettura i PDF restano **in cache** per la sessione: cambiare i
@@ -81,9 +88,10 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
   cartella nel gestore file del sistema operativo**. Per questo i collegamenti
   aprono direttamente i **PDF positivi** (la cosa più utile) e viene mostrato il
   nome della cartella del paziente.
-- Struttura attesa delle cartelle: `cartella scelta` → `COGNOME_SDO` → file PDF.
-  L'SDO è la parte dopo l'ultimo trattino basso `_` (così funzionano anche
-  cognomi composti come `DE_LUCA_999`).
+- Struttura attesa delle cartelle: `cartella scelta` → `COGNOME_SDO` → file PDF
+  (esempio reale: `Daily` → `Abatiello_2118001262` → i PDF delle giornate).
+  L'SDO è la parte dopo l'ultimo trattino basso `_`, quindi funzionano anche i
+  cognomi con spazi (`Afeworki Berhe_2124016976`) o con più `_` (`DE_LUCA_999`).
 - Tutto avviene in locale nel browser; con molti PDF la prima indicizzazione può
   richiedere un po' di tempo, ma poi la ricerca è immediata.
 
@@ -94,5 +102,7 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
 - Una sola pagina: **`index.html`** (HTML + CSS + JavaScript, nessuna dipendenza
   da installare).
 - Lettura PDF nel browser con **pdf.js** (caricata da CDN, poi in cache).
-- Selezione cartelle con l'attributo `webkitdirectory` dei browser.
+- Selezione cartelle con la **File System Access API** (`showDirectoryPicker`)
+  su Chrome/Edge, con ripiego automatico su `webkitdirectory` sugli altri
+  browser.
 - Ricerca con tolleranza ai refusi tramite **distanza di Levenshtein** (≤ 2).

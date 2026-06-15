@@ -25,11 +25,10 @@
   .hint{color:var(--grigio); font-size:13px; font-weight:400;}
   .row{display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start;}
   .row > div{flex:1; min-width:240px;}
-  input[type=text], textarea, .filebox{
+  input[type=text], textarea{
     width:100%; padding:9px 11px; border:1px solid var(--bordo); border-radius:8px; font:inherit; background:#fff;
   }
   textarea{resize:vertical; min-height:70px;}
-  .filebox{display:flex; align-items:center; gap:10px;}
   .controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center; margin-top:6px;}
   .controls label{display:inline-flex; align-items:center; gap:6px; font-weight:500; margin:0;}
   button{
@@ -61,12 +60,13 @@
   .badge.err{background:#fde8e6; color:var(--rosso); border-color:#f3b6ae;}
   .nowrap{white-space:nowrap;}
   #resultsBox{max-height:520px; overflow:auto; border:1px solid var(--bordo); border-radius:8px;}
+  .pickline{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
 </style>
 </head>
 <body>
 <header>
   <h1>InnovianSearcher</h1>
-  <p>Ricerca termini nei PDF delle cartelle dei pazienti &mdash; gira tutto nel tuo browser, in locale, senza installare nulla e senza server. Adatto a migliaia di PDF.</p>
+  <p>Ricerca termini nei PDF delle cartelle dei pazienti &mdash; gira tutto nel tuo browser, in locale, senza installare nulla e senza server. Adatto a migliaia di cartelle, anche su disco di rete.</p>
 </header>
 
 <main>
@@ -79,14 +79,20 @@
     </div>
     <div class="row">
       <div>
-        <label>Cartella pazienti <span class="hint">(contiene le cartelle <code>COGNOME_SDO</code>)</span></label>
-        <div class="filebox"><input type="file" id="dir1" webkitdirectory directory multiple /></div>
-        <div class="status" id="dir1info"></div>
+        <label>Cartella pazienti <span class="hint">(quella che contiene le cartelle <code>COGNOME_SDO</code>, es. <code>Daily</code>)</span></label>
+        <div class="pickline">
+          <button class="secondary" id="pick1" type="button">Scegli cartella&hellip;</button>
+          <span class="status" id="dir1info" style="margin:0;"></span>
+        </div>
+        <input type="file" id="dir1" webkitdirectory directory multiple style="display:none" />
       </div>
       <div id="dir2block">
         <label>Seconda cartella <span class="hint">(solo diarie infermieristiche)</span></label>
-        <div class="filebox"><input type="file" id="dir2" webkitdirectory directory multiple disabled /></div>
-        <div class="status" id="dir2info"></div>
+        <div class="pickline">
+          <button class="secondary" id="pick2" type="button" disabled>Scegli cartella&hellip;</button>
+          <span class="status" id="dir2info" style="margin:0;"></span>
+        </div>
+        <input type="file" id="dir2" webkitdirectory directory multiple style="display:none" />
       </div>
     </div>
     <div class="status" id="libStatus"></div>
@@ -112,8 +118,8 @@
       </div>
       <div>
         <label>Filtro SDO <span class="hint">(uno per riga o separati da virgola; vuoto = tutti)</span></label>
-        <textarea id="sdoFilter" placeholder="12345&#10;67890"></textarea>
-        <div class="hint" style="margin-top:4px;">Con un elenco di SDO la ricerca legge <b>solo</b> quei pazienti: molto più veloce.</div>
+        <textarea id="sdoFilter" placeholder="2118001262&#10;2123015297"></textarea>
+        <div class="hint" style="margin-top:4px;">Con un elenco di SDO la ricerca apre e legge <b>solo</b> quelle cartelle: molto più veloce sui dischi di rete.</div>
       </div>
     </div>
     <div style="margin-top:14px;">
@@ -141,6 +147,7 @@
 
   const $ = (id) => document.getElementById(id);
   const dir1 = $("dir1"), dir2 = $("dir2");
+  const pick1 = $("pick1"), pick2 = $("pick2");
   const dir1info = $("dir1info"), dir2info = $("dir2info"), dir2block = $("dir2block");
   const libStatus = $("libStatus");
   const searchCard = $("searchCard");
@@ -148,11 +155,12 @@
   const searchBar = $("searchBar"), searchStatus = $("searchStatus");
   const resultsBox = $("resultsBox"), resCount = $("resCount");
 
-  // Numero di PDF letti contemporaneamente (parallelismo).
-  const CONCURRENCY = 8;
+  const CONCURRENCY = 8;          // PDF/cartelle lette in parallelo
+  const hasFS = typeof window.showDirectoryPicker === "function";
 
-  let patients = [];                 // [{cognome,sdo,folderName,files:[File]}]
-  const wordCache = new Map();       // File -> Set<string> (gia' letti)
+  let source1 = null, source2 = null;   // {type:'fs',root} oppure {type:'input',files:[]}
+  let patients = [];                     // [{cognome,sdo,folderName,inputEntries,dirHandles,_entries}]
+  const wordCache = new Map();           // entry -> Set<string>
   let lastResults = [];
   let running = false, aborted = false;
 
@@ -160,7 +168,8 @@
   if (window.pdfjsLib) {
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    libStatus.innerHTML = "Libreria di lettura PDF pronta.";
+    libStatus.innerHTML = "Libreria di lettura PDF pronta." +
+      (hasFS ? "" : " <span class='badge'>Modalità compatibile</span> (per dischi di rete molto grandi usa Chrome o Edge).");
   } else {
     libStatus.innerHTML = '<span class="badge err">Libreria PDF non caricata</span> ' +
       "serve il collegamento a Internet al primo avvio: connettiti e ricarica la pagina.";
@@ -170,24 +179,48 @@
   const currentMode = () => document.querySelector('input[name="mode"]:checked').value;
   function refreshMode() {
     const nursing = currentMode() === "nursing";
-    dir2.disabled = !nursing;
+    pick2.disabled = !nursing;
     dir2block.style.opacity = nursing ? "1" : ".5";
-    if (!nursing) { dir2.value = ""; dir2info.textContent = ""; }
+    if (!nursing) { source2 = null; dir2info.textContent = ""; }
     rebuildPatients();
   }
   document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", refreshMode));
 
-  dir1.addEventListener("change", () => { showPicked(dir1, dir1info); rebuildPatients(); });
-  dir2.addEventListener("change", () => { showPicked(dir2, dir2info); rebuildPatients(); });
+  // ---- Selezione cartella (FS Access API con fallback su input) ----
+  pick1.addEventListener("click", () => pick(1));
+  pick2.addEventListener("click", () => pick(2));
+  dir1.addEventListener("change", () => onInputPicked(1));
+  dir2.addEventListener("change", () => onInputPicked(2));
 
-  const isPdf = (f) => /\.pdf$/i.test(f.name);
-
-  function showPicked(input, infoEl) {
-    if (!input.files.length) { infoEl.textContent = ""; return; }
-    const pdfs = [...input.files].filter(isPdf).length;
-    const root = (input.files[0].webkitRelativePath || "").split("/")[0] || "(cartella)";
-    infoEl.textContent = `Cartella "${root}": ${pdfs} PDF.`;
+  async function pick(which) {
+    if (hasFS) {
+      try {
+        const root = await window.showDirectoryPicker({ mode: "read" });
+        setSource(which, { type: "fs", root });
+        (which === 1 ? dir1info : dir2info).textContent = `Cartella "${root.name}" selezionata.`;
+        await rebuildPatients();
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return;     // l'utente ha annullato
+        // qualsiasi altro errore: ripiego sul metodo classico
+      }
+    }
+    (which === 1 ? dir1 : dir2).click();
   }
+
+  async function onInputPicked(which) {
+    const input = which === 1 ? dir1 : dir2;
+    const infoEl = which === 1 ? dir1info : dir2info;
+    if (!input.files.length) return;
+    const root = (input.files[0].webkitRelativePath || "").split("/")[0] || "(cartella)";
+    const pdfs = [...input.files].filter(isPdf).length;
+    infoEl.textContent = `Cartella "${root}": ${pdfs} PDF.`;
+    setSource(which, { type: "input", files: [...input.files] });
+    await rebuildPatients();
+  }
+
+  function setSource(which, src) { if (which === 1) source1 = src; else source2 = src; }
+  const isPdf = (name) => /\.pdf$/i.test(typeof name === "string" ? name : name.name);
 
   function splitName(folderName) {
     const i = folderName.lastIndexOf("_");
@@ -196,39 +229,89 @@
     return { cognome: "", sdo: folderName.trim() };
   }
 
-  function rebuildPatients() {
-    const lists = [[...dir1.files]];
-    if (currentMode() === "nursing") lists.push([...dir2.files]);
+  function getPatient(map, folderName) {
+    const { cognome, sdo } = splitName(folderName);
+    const key = sdo.toLowerCase();
+    let p = map.get(key);
+    if (!p) { p = { cognome, sdo, folderName, inputEntries: null, dirHandles: [], _entries: null }; map.set(key, p); }
+    return p;
+  }
 
-    const map = new Map();
-    let pdfCount = 0;
-    for (const files of lists) {
-      for (const f of files) {
-        if (!isPdf(f)) continue;
+  async function buildFromSource(src, map) {
+    if (!src) return 0;
+    if (src.type === "input") {
+      let pdfCount = 0;
+      for (const f of src.files) {
+        if (!isPdf(f.name)) continue;
         const parts = (f.webkitRelativePath || f.name).split("/");
         const folderName = parts.length >= 3 ? parts[1] : (parts.length === 2 ? parts[0] : "");
         if (!folderName) continue;
-        const { cognome, sdo } = splitName(folderName);
-        const key = sdo.toLowerCase();
-        let p = map.get(key);
-        if (!p) { p = { cognome, sdo, folderName, files: [] }; map.set(key, p); }
-        p.files.push(f);
+        const p = getPatient(map, folderName);
+        if (!p.inputEntries) p.inputEntries = [];
+        const file = f;
+        p.inputEntries.push({ name: f.name, getFile: () => file });
         pdfCount++;
       }
+      return pdfCount;
     }
+    // FS: elenco solo dei nomi cartella (veloce, niente lettura file)
+    for await (const handle of src.root.values()) {
+      if (handle.kind !== "directory") continue;
+      const p = getPatient(map, handle.name);
+      p.dirHandles.push(handle);
+    }
+    return -1; // numero PDF non noto finche' non si cerca
+  }
+
+  async function rebuildPatients() {
+    const srcs = [source1];
+    if (currentMode() === "nursing") srcs.push(source2);
+    if (!srcs.some(Boolean)) { patients = []; searchCard.classList.add("disabled-block"); searchStatus.textContent = ""; return; }
+
+    searchStatus.textContent = "Lettura elenco cartelle\u2026";
+    const map = new Map();
+    let pdfCount = 0, anyFs = false;
+    try {
+      for (const s of srcs) {
+        const c = await buildFromSource(s, map);
+        if (c < 0) anyFs = true; else pdfCount += c;
+      }
+    } catch (e) {
+      searchStatus.innerHTML = '<span class="badge err">Errore nella lettura della cartella:</span> ' + esc(e.message || e);
+      return;
+    }
+
     patients = [...map.values()].sort((a, b) =>
       a.folderName.toLowerCase().localeCompare(b.folderName.toLowerCase(), "it"));
 
     if (patients.length) {
       searchCard.classList.remove("disabled-block");
-      searchStatus.innerHTML = `Pronto: <b>${patients.length}</b> pazienti, <b>${pdfCount}</b> PDF. ` +
-        "Imposta i termini e premi <b>Cerca</b>.";
+      searchStatus.innerHTML = `Pronto: <b>${patients.length}</b> pazienti` +
+        (anyFs ? " (i PDF verranno contati durante la ricerca)." : `, <b>${pdfCount}</b> PDF.`) +
+        " Imposta i termini e premi <b>Cerca</b>.";
     } else {
       searchCard.classList.add("disabled-block");
-      searchStatus.textContent = "";
+      searchStatus.textContent = "Nessuna cartella paziente trovata. Verifica di aver scelto la cartella che contiene le sottocartelle COGNOME_SDO.";
     }
   }
-  refreshMode();
+
+  // ---- Elenco PDF di un paziente (lazy + cache) ----
+  async function listEntries(p) {
+    if (p._entries) return p._entries;
+    const out = [];
+    if (p.inputEntries) for (const e of p.inputEntries) out.push(e);
+    for (const dh of p.dirHandles) {
+      for await (const h of dh.values()) {
+        if (h.kind === "file" && isPdf(h.name)) {
+          const handle = h;
+          out.push({ name: h.name, getFile: () => handle.getFile() });
+        }
+      }
+    }
+    out.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase(), "it"));
+    p._entries = out;
+    return out;
+  }
 
   // ---- Tokenizzazione ----
   const WORD_RE = /[\p{L}\p{N}]+/gu;
@@ -284,9 +367,10 @@
   }
 
   // ---- Lettura testo da un PDF (con cache) ----
-  async function getWords(file) {
-    const cached = wordCache.get(file);
+  async function getWords(entry) {
+    const cached = wordCache.get(entry);
     if (cached) return cached;
+    const file = await entry.getFile();
     const buf = await file.arrayBuffer();
     const doc = await pdfjsLib.getDocument({ data: buf, disableAutoFetch: true, disableStream: true }).promise;
     let text = "";
@@ -298,20 +382,18 @@
     }
     await doc.destroy();
     const words = tokenize(text);
-    wordCache.set(file, words);
+    wordCache.set(entry, words);
     return words;
   }
 
-  // ---- Ricerca (streaming, in parallelo) ----
+  // ---- Ricerca ----
   searchBtn.addEventListener("click", runSearch);
   stopBtn.addEventListener("click", () => { aborted = true; stopBtn.disabled = true; });
 
   async function runSearch() {
     if (running || !patients.length) return;
-    if (!window.pdfjsLib) {
-      searchStatus.innerHTML = '<span class="badge err">Libreria PDF non disponibile.</span>';
-      return;
-    }
+    if (!window.pdfjsLib) { searchStatus.innerHTML = '<span class="badge err">Libreria PDF non disponibile.</span>'; return; }
+
     const terms = $("terms").value.split(",").map(normalizeTerm).filter(Boolean);
     if (!terms.length) { searchStatus.textContent = "Inserisci almeno un termine."; return; }
 
@@ -321,112 +403,108 @@
     const sdoSet = new Set($("sdoFilter").value.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean));
     const uniqueTermCount = new Set(terms).size;
 
-    // Pazienti da esaminare (filtro SDO applicato subito).
-    const targets = sdoSet.size
-      ? patients.filter((p) => sdoSet.has(p.sdo.toLowerCase()))
-      : patients.slice();
+    const targets = sdoSet.size ? patients.filter((p) => sdoSet.has(p.sdo.toLowerCase())) : patients.slice();
 
-    // Coda dei PDF da leggere.
-    const queue = [];
-    for (const p of targets) {
-      p._matched = [];
-      p._remaining = p.files.length;
-      p._done = false;
-      p._finalized = false;
-      for (const f of p.files) queue.push({ p, f });
-    }
-    const total = queue.length;
-
-    if (total === 0) {
-      searchStatus.textContent = sdoSet.size
-        ? "Nessun paziente corrisponde agli SDO indicati." : "Nessun PDF da leggere.";
-      return;
-    }
-
-    // Stato UI
     running = true; aborted = false;
     lastResults = [];
     searchBtn.disabled = true; exportBtn.disabled = true; stopBtn.disabled = false;
     initResultsTable();
+    setBar(searchBar, 0);
+
+    if (!targets.length) {
+      searchStatus.textContent = sdoSet.size ? "Nessun paziente corrisponde agli SDO indicati." : "Nessun paziente.";
+      finishUI(); return;
+    }
+
+    // Fase A: elenco dei PDF (apre solo le cartelle bersaglio).
+    searchStatus.textContent = "Preparazione elenco file\u2026";
+    const queue = [];
+    let prepDone = 0, pi = 0;
+    async function prepWorker() {
+      while (pi < targets.length && !aborted) {
+        const p = targets[pi++];
+        p._matched = []; p._done = false; p._finalized = false;
+        let entries;
+        try { entries = await listEntries(p); } catch (e) { entries = []; }
+        p._remaining = entries.length;
+        for (const e of entries) queue.push({ p, e });
+        prepDone++;
+        if (prepDone % 25 === 0 || prepDone === targets.length) {
+          searchStatus.textContent = `Preparazione elenco file: ${prepDone}/${targets.length} cartelle\u2026`;
+          await sleep(0);
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, prepWorker));
+
+    const total = queue.length;
+    if (total === 0) { searchStatus.textContent = "Nessun PDF trovato nelle cartelle selezionate."; finishUI(); return; }
+
+    // Fase B: lettura + ricerca in parallelo, risultati in tempo reale.
     let processed = 0, errors = 0, positives = 0;
     const t0 = performance.now();
 
     const updateUI = () => {
       setBar(searchBar, (processed / total) * 100);
-      const secs = ((performance.now() - t0) / 1000);
-      const rate = processed > 0 ? (processed / secs) : 0;
+      const secs = (performance.now() - t0) / 1000;
+      const rate = processed > 0 ? processed / secs : 0;
       const eta = rate > 0 ? Math.max(0, Math.round((total - processed) / rate)) : 0;
       searchStatus.innerHTML =
-        `Letti <b>${processed}</b>/<b>${total}</b> PDF` +
-        ` &middot; <b>${positives}</b> pazienti positivi` +
+        `Letti <b>${processed}</b>/<b>${total}</b> PDF &middot; <b>${positives}</b> pazienti positivi` +
         (errors ? ` &middot; <span class="badge err">${errors} non leggibili</span>` : "") +
         (processed < total ? ` &middot; ~${eta}s rimanenti` : ` &middot; completato in ${secs.toFixed(1)}s`);
     };
 
     const finalize = (p) => {
       if (p._finalized || !p._matched.length) return;
-      p._finalized = true;
-      positives++;
+      p._finalized = true; positives++;
       const res = { patient: p, matchedPdfs: p._matched };
-      lastResults.push(res);
-      appendResultRow(res);
-      resCount.textContent = `(${positives})`;
+      lastResults.push(res); appendResultRow(res); resCount.textContent = `(${positives})`;
     };
 
     let qi = 0;
-    async function poolWorker() {
+    async function readWorker() {
       while (qi < queue.length && !aborted) {
-        const { p, f } = queue[qi++];
-        if (p._done) {                 // paziente gia' positivo (stop al primo)
-          p._remaining--;
-          processed++;
-          continue;
-        }
+        const { p, e } = queue[qi++];
+        if (p._done) { p._remaining--; processed++; continue; }
         let words;
-        try {
-          words = await getWords(f);
-        } catch (e) {
-          words = new Set(); errors++;
-        }
-        processed++;
-        p._remaining--;
-
+        try { words = await getWords(e); } catch (err) { words = new Set(); errors++; }
+        processed++; p._remaining--;
         const found = matchPdf(words, terms, maxTypos);
         const positive = logic === "OR" ? found.size > 0 : found.size === uniqueTermCount;
         if (positive) {
-          p._matched.push({ file: f, terms: [...found] });
+          p._matched.push({ entry: e, terms: [...found] });
           if (stopFirst) { p._done = true; finalize(p); }
         }
         if (!p._done && p._remaining === 0) finalize(p);
-
         if (processed % 5 === 0 || processed === total) { updateUI(); await sleep(0); }
       }
     }
 
     updateUI();
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, poolWorker));
-
-    // Finalizza eventuali pazienti rimasti (caso "leggi tutti" interrotto a meta').
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, readWorker));
     for (const p of targets) if (!p._done && p._remaining === 0) finalize(p);
 
     setBar(searchBar, 100);
     updateUI();
     if (aborted) searchStatus.innerHTML += ' &middot; <span class="badge">interrotto</span>';
     if (!lastResults.length) resultsBox.innerHTML = '<div class="empty">Nessun paziente positivo per questa ricerca.</div>';
+    finishUI();
+  }
 
+  function finishUI() {
     running = false;
     searchBtn.disabled = false; stopBtn.disabled = true;
     exportBtn.disabled = lastResults.length === 0;
   }
 
-  // ---- Tabella risultati (popolata in tempo reale) ----
+  // ---- Tabella risultati (in tempo reale) ----
   let tbodyEl = null;
   function initResultsTable() {
     resCount.textContent = "(0)";
     resultsBox.innerHTML = "";
     const table = document.createElement("table");
-    table.innerHTML =
-      "<thead><tr><th>Cognome</th><th>SDO</th><th class='nowrap'>PDF positivi</th><th>Termini trovati</th></tr></thead>";
+    table.innerHTML = "<thead><tr><th>Cognome</th><th>SDO</th><th class='nowrap'>PDF positivi</th><th>Termini trovati</th></tr></thead>";
     tbodyEl = document.createElement("tbody");
     table.appendChild(tbodyEl);
     resultsBox.appendChild(table);
@@ -452,25 +530,28 @@
       "<div style='margin-top:6px'><b>PDF (giornate) positive &ndash; clicca per aprire:</b></div>" +
       "<ul style='margin:6px 0 0 18px'>" +
       res.matchedPdfs.map((m) =>
-        `<li><a data-open="1">${esc(m.file.name)}</a> <span class="hint">[${m.terms.map(esc).join(", ")}]</span></li>`).join("") +
+        `<li><a data-open="1">${esc(m.entry.name)}</a> <span class="hint">[${m.terms.map(esc).join(", ")}]</span></li>`).join("") +
       "</ul>";
     detail.appendChild(td);
 
-    tr.addEventListener("click", () => {
-      detail.style.display = detail.style.display === "none" ? "" : "none";
-    });
+    tr.addEventListener("click", () => { detail.style.display = detail.style.display === "none" ? "" : "none"; });
     td.querySelectorAll('a[data-open]').forEach((a, k) => {
-      a.addEventListener("click", (ev) => { ev.stopPropagation(); openFile(res.matchedPdfs[k].file); });
+      a.addEventListener("click", async (ev) => { ev.stopPropagation(); await openEntry(res.matchedPdfs[k].entry); });
     });
 
     tbodyEl.appendChild(tr);
     tbodyEl.appendChild(detail);
   }
 
-  function openFile(file) {
-    const url = URL.createObjectURL(file);
-    window.open(url, "_blank");
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  async function openEntry(entry) {
+    try {
+      const file = await entry.getFile();
+      const url = URL.createObjectURL(file);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      alert("Impossibile aprire il PDF: " + (e.message || e));
+    }
   }
 
   // ---- Esportazione CSV ----
@@ -479,7 +560,7 @@
     const rows = ["Cognome;SDO;PDF positivi;Termini trovati;Cartella;File positivi"];
     for (const r of lastResults) {
       const termini = [...new Set(r.matchedPdfs.flatMap((m) => m.terms))].join(" ");
-      const files = r.matchedPdfs.map((m) => m.file.name).join(" | ");
+      const files = r.matchedPdfs.map((m) => m.entry.name).join(" | ");
       rows.push([csv(r.patient.cognome), csv(r.patient.sdo), r.matchedPdfs.length,
         csv(termini), csv(r.patient.folderName), csv(files)].join(";"));
     }
@@ -498,6 +579,8 @@
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function csv(s) { return String(s == null ? "" : s).replace(/;/g, ",").replace(/[\r\n]+/g, " "); }
+
+  refreshMode();
 })();
 </script>
 </body>
