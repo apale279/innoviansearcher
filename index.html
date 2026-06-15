@@ -10,14 +10,11 @@
     --testo:#1c2430; --grigio:#5b6675; --ok:#1a7f37; --warn:#9a6700; --rosso:#b42318;
   }
   *{box-sizing:border-box}
-  body{
-    margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg); color:var(--testo); font-size:15px; line-height:1.45;
-  }
+  body{margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--testo); font-size:15px; line-height:1.45;}
   header{background:linear-gradient(135deg,var(--blu),var(--blu-scuro)); color:#fff; padding:18px 22px;}
   header h1{margin:0; font-size:21px;}
   header p{margin:4px 0 0; opacity:.9; font-size:13px;}
-  main{max-width:1080px; margin:18px auto; padding:0 16px 60px;}
+  main{max-width:1180px; margin:18px auto; padding:0 16px 60px;}
   .card{background:#fff; border:1px solid var(--bordo); border-radius:12px; padding:18px 20px; margin-bottom:18px; box-shadow:0 1px 3px rgba(20,30,50,.05);}
   .card h2{margin:0 0 14px; font-size:16px; display:flex; align-items:center; gap:8px;}
   .step{display:inline-flex; width:24px; height:24px; border-radius:50%; background:var(--blu); color:#fff; font-size:13px; align-items:center; justify-content:center; font-weight:700;}
@@ -25,16 +22,11 @@
   .hint{color:var(--grigio); font-size:13px; font-weight:400;}
   .row{display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start;}
   .row > div{flex:1; min-width:240px;}
-  input[type=text], textarea{
-    width:100%; padding:9px 11px; border:1px solid var(--bordo); border-radius:8px; font:inherit; background:#fff;
-  }
+  input[type=text], textarea{width:100%; padding:9px 11px; border:1px solid var(--bordo); border-radius:8px; font:inherit; background:#fff;}
   textarea{resize:vertical; min-height:90px;}
   .controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center; margin-top:6px;}
   .controls label{display:inline-flex; align-items:center; gap:6px; font-weight:500; margin:0;}
-  button{
-    background:var(--blu); color:#fff; border:none; padding:10px 18px; border-radius:8px;
-    font:inherit; font-weight:600; cursor:pointer;
-  }
+  button{background:var(--blu); color:#fff; border:none; padding:10px 18px; border-radius:8px; font:inherit; font-weight:600; cursor:pointer;}
   button:hover{background:var(--blu-scuro)}
   button:disabled{background:#aab3c0; cursor:not-allowed}
   button.secondary{background:#eef1f6; color:var(--testo); border:1px solid var(--bordo);}
@@ -60,19 +52,22 @@
   .badge.err{background:#fde8e6; color:var(--rosso); border-color:#f3b6ae;}
   .badge.ok{background:#e3f5e8; color:var(--ok); border-color:#abdcb9;}
   .nowrap{white-space:nowrap;}
-  #resultsBox{max-height:520px; overflow:auto; border:1px solid var(--bordo); border-radius:8px;}
+  .resbox{max-height:520px; overflow:auto; border:1px solid var(--bordo); border-radius:8px;}
   .pickline{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   .reconcile{display:flex; gap:18px; flex-wrap:wrap; margin-top:10px;}
   .reconcile > div{flex:1; min-width:220px; border:1px solid var(--bordo); border-radius:8px; padding:10px 12px; background:#fafbfd;}
   .reconcile h3{margin:0 0 6px; font-size:14px;}
   .codelist{max-height:170px; overflow:auto; font-family:ui-monospace,Consolas,monospace; font-size:13px; white-space:pre-wrap;}
   .dataprima{font-weight:700; color:var(--blu-scuro);}
+  .yes{color:var(--ok); font-weight:700;}
+  .no{color:var(--grigio);}
+  td.num{text-align:right; font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
 <header>
   <h1>InnovianSearcher</h1>
-  <p>Verifica un elenco di SDO e cerca nei PDF delle cartelle dei pazienti &mdash; tutto nel browser, in locale, senza installare nulla e senza server.</p>
+  <p>Verifica elenco SDO, ricerca farmaco ed estrazione esami (ALP, AST, ALT, Bilirubina) &mdash; tutto nel browser, in locale, senza installare nulla e senza server.</p>
 </header>
 
 <main>
@@ -85,13 +80,12 @@
     </div>
     <div class="row">
       <div>
-        <label>Cartella pazienti <span class="hint">(quella che contiene le cartelle <code>COGNOME_SDO</code>, es. <code>Daily</code>)</span></label>
+        <label>Cartella pazienti <span class="hint">(contiene le cartelle <code>COGNOME_SDO</code>, es. <code>Daily</code>)</span></label>
         <div class="pickline">
           <button class="secondary" id="pick1" type="button">Scegli cartella&hellip;</button>
           <span class="status" id="dir1info" style="margin:0;"></span>
         </div>
         <input type="file" id="dir1" webkitdirectory directory multiple style="display:none" />
-
         <div id="dir2block" style="margin-top:12px;">
           <label>Seconda cartella <span class="hint">(solo diarie infermieristiche)</span></label>
           <div class="pickline">
@@ -132,10 +126,8 @@
           <label><input type="checkbox" id="stopFirst" checked /> Fermati al primo PDF positivo per paziente</label>
         </div>
         <div class="hint" style="margin-top:8px;">
-          La ricerca viene eseguita sui pazienti del tuo elenco trovati al passo 1
-          (se l'elenco è vuoto, cerca in tutti i pazienti della cartella).
-          La <b>prima data di assunzione</b> è il giorno <b>precedente</b> alla creazione del PDF positivo più vecchio
-          (il PDF viene generato alle 7 del mattino del giorno dopo).
+          Ricerca eseguita sui pazienti del tuo elenco trovati al passo 1 (vuoto = tutti).
+          La <b>prima data di assunzione</b> è il giorno precedente alla creazione del PDF positivo più vecchio.
         </div>
       </div>
     </div>
@@ -146,13 +138,29 @@
       <div class="progress"><div id="searchBar"></div></div>
       <div class="status" id="searchStatus"></div>
     </div>
+    <div class="resbox" id="resultsBox" style="margin-top:12px;">
+      <div class="empty">Nessuna ricerca eseguita.</div>
+    </div>
   </section>
 
-  <!-- 3) Risultati -->
-  <section class="card">
-    <h2><span class="step">3</span> Pazienti positivi <span class="hint" id="resCount"></span></h2>
-    <div id="resultsBox">
-      <div class="empty">Nessuna ricerca eseguita.</div>
+  <!-- 3) Esami di laboratorio -->
+  <section class="card disabled-block" id="examCard">
+    <h2><span class="step">3</span> Esami di laboratorio (tutti i pazienti dell'elenco)</h2>
+    <div class="hint" style="margin-bottom:10px;">
+      Per <b>ogni</b> paziente dell'elenco (preso o no il farmaco) estrae da tutte le tabelle dei PDF il
+      <b>valore di picco</b> e la <b>data del picco</b> di <b>ALP, AST, ALT, Bilirubina</b>
+      (riconosce anche nomi alternativi). La data del picco è il giorno precedente alla creazione del PDF.
+      Mostra anche se il paziente è positivo al farmaco del passo 2 e la prima data di assunzione.
+    </div>
+    <div>
+      <button id="examBtn">Analizza esami</button>
+      <button class="danger" id="examStopBtn" disabled>Ferma</button>
+      <button class="secondary" id="examExportBtn" disabled>Esporta tabella esami (CSV)</button>
+      <div class="progress"><div id="examBar"></div></div>
+      <div class="status" id="examStatus"></div>
+    </div>
+    <div class="resbox" id="examBox" style="margin-top:12px;">
+      <div class="empty">Nessuna analisi eseguita.</div>
     </div>
   </section>
 </main>
@@ -163,38 +171,44 @@
   "use strict";
 
   const $ = (id) => document.getElementById(id);
-  const dir1 = $("dir1"), dir2 = $("dir2");
-  const pick1 = $("pick1"), pick2 = $("pick2");
+  const dir1 = $("dir1"), dir2 = $("dir2"), pick1 = $("pick1"), pick2 = $("pick2");
   const dir1info = $("dir1info"), dir2info = $("dir2info"), dir2block = $("dir2block");
   const libStatus = $("libStatus");
   const sdoFilter = $("sdoFilter"), verifyBtn = $("verifyBtn"), verifyExportBtn = $("verifyExportBtn");
   const reconcileBox = $("reconcileBox");
-  const searchCard = $("searchCard");
+  const searchCard = $("searchCard"), examCard = $("examCard");
   const searchBtn = $("searchBtn"), stopBtn = $("stopBtn"), exportBtn = $("exportBtn");
-  const searchBar = $("searchBar"), searchStatus = $("searchStatus");
-  const resultsBox = $("resultsBox"), resCount = $("resCount");
+  const searchBar = $("searchBar"), searchStatus = $("searchStatus"), resultsBox = $("resultsBox"), resCount = null;
+  const examBtn = $("examBtn"), examStopBtn = $("examStopBtn"), examExportBtn = $("examExportBtn");
+  const examBar = $("examBar"), examStatus = $("examStatus"), examBox = $("examBox");
 
   const CONCURRENCY = 8;
   const hasFS = typeof window.showDirectoryPicker === "function";
   const DAY_MS = 24 * 60 * 60 * 1000;
 
+  // === Esami: nomi alternativi (MODIFICABILI in base al formato reale dei PDF) ===
+  // exclude: parole che, se presenti nella riga, la fanno scartare (per non confondere gli esami).
+  const ANALYTES = [
+    { key: "ALP", label: "ALP", syn: ["fosfatasi alcalina", "fosf alcalina", "fosfatasi alc", "alkaline phosphatase", "alp", "alkp"], exclude: [] },
+    { key: "AST", label: "AST", syn: ["aspartato aminotransferasi", "aspartato transaminasi", "transaminasi got", "ast", "got", "sgot"], exclude: [] },
+    { key: "ALT", label: "ALT", syn: ["alanina aminotransferasi", "alanina transaminasi", "transaminasi gpt", "alt", "gpt", "sgpt"], exclude: [] },
+    { key: "BIL", label: "Bilirubina", syn: ["bilirubina totale", "bilirubina tot", "bilirubina", "bil tot", "bilt", "tbil"], exclude: ["diretta", "indiretta", "coniugata", "frazionata"] }
+  ];
+
   let source1 = null, source2 = null;
-  let patients = [];
-  let patientsBySdo = new Map();         // sdo(lowercase) -> patient
-  const wordCache = new Map();           // entry -> Set<string>
-  let lastResults = [];
-  let lastReconcile = null;              // {found:[{sdo,cognome}], notFound:[sdo]}
+  let patients = [], patientsBySdo = new Map();
+  const dataCache = new Map();          // entry -> {words:Set, lines:[String]}
+  let lastResults = [];                  // ricerca farmaco
+  let lastExam = [];                     // analisi esami
+  let lastReconcile = null;
   let running = false, aborted = false;
 
   // ---- pdf.js ----
   if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    libStatus.innerHTML = "Libreria di lettura PDF pronta." +
-      (hasFS ? "" : " <span class='badge'>Modalità compatibile</span> (per dischi di rete molto grandi usa Chrome o Edge).");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    libStatus.innerHTML = "Libreria di lettura PDF pronta." + (hasFS ? "" : " <span class='badge'>Modalità compatibile</span> (per dischi di rete molto grandi usa Chrome o Edge).");
   } else {
-    libStatus.innerHTML = '<span class="badge err">Libreria PDF non caricata</span> ' +
-      "serve il collegamento a Internet al primo avvio: connettiti e ricarica la pagina.";
+    libStatus.innerHTML = '<span class="badge err">Libreria PDF non caricata</span> serve il collegamento a Internet al primo avvio: connettiti e ricarica la pagina.';
   }
 
   // ---- Modalita' 1 / 2 cartelle ----
@@ -208,7 +222,6 @@
   }
   document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", refreshMode));
 
-  // ---- Selezione cartella ----
   pick1.addEventListener("click", () => pick(1));
   pick2.addEventListener("click", () => pick(2));
   dir1.addEventListener("change", () => onInputPicked(1));
@@ -222,9 +235,7 @@
         (which === 1 ? dir1info : dir2info).textContent = `Cartella "${root.name}" selezionata.`;
         await rebuildPatients();
         return;
-      } catch (e) {
-        if (e && e.name === "AbortError") return;
-      }
+      } catch (e) { if (e && e.name === "AbortError") return; }
     }
     (which === 1 ? dir1 : dir2).click();
   }
@@ -249,7 +260,6 @@
       return { cognome: folderName.slice(0, i).trim(), sdo: folderName.slice(i + 1).trim() };
     return { cognome: "", sdo: folderName.trim() };
   }
-
   function getPatient(map, folderName) {
     const { cognome, sdo } = splitName(folderName);
     const key = sdo.toLowerCase();
@@ -257,7 +267,6 @@
     if (!p) { p = { cognome, sdo, folderName, inputEntries: null, dirHandles: [], _entries: null }; map.set(key, p); }
     return p;
   }
-
   async function buildFromSource(src, map) {
     if (!src) return 0;
     if (src.type === "input") {
@@ -277,8 +286,7 @@
     }
     for await (const handle of src.root.values()) {
       if (handle.kind !== "directory") continue;
-      const p = getPatient(map, handle.name);
-      p.dirHandles.push(handle);
+      getPatient(map, handle.name).dirHandles.push(handle);
     }
     return -1;
   }
@@ -288,88 +296,59 @@
     if (currentMode() === "nursing") srcs.push(source2);
     if (!srcs.some(Boolean)) {
       patients = []; patientsBySdo = new Map();
-      searchCard.classList.add("disabled-block");
-      verifyBtn.disabled = true; verifyExportBtn.disabled = true;
-      searchStatus.textContent = ""; return;
+      searchCard.classList.add("disabled-block"); examCard.classList.add("disabled-block");
+      verifyBtn.disabled = true; verifyExportBtn.disabled = true; searchStatus.textContent = ""; return;
     }
-
     searchStatus.textContent = "Lettura elenco cartelle\u2026";
     const map = new Map();
     let pdfCount = 0, anyFs = false;
     try {
-      for (const s of srcs) {
-        const c = await buildFromSource(s, map);
-        if (c < 0) anyFs = true; else pdfCount += c;
-      }
+      for (const s of srcs) { const c = await buildFromSource(s, map); if (c < 0) anyFs = true; else pdfCount += c; }
     } catch (e) {
-      searchStatus.innerHTML = '<span class="badge err">Errore nella lettura della cartella:</span> ' + esc(e.message || e);
-      return;
+      searchStatus.innerHTML = '<span class="badge err">Errore nella lettura della cartella:</span> ' + esc(e.message || e); return;
     }
-
     patientsBySdo = map;
-    patients = [...map.values()].sort((a, b) =>
-      a.folderName.toLowerCase().localeCompare(b.folderName.toLowerCase(), "it"));
-
+    patients = [...map.values()].sort((a, b) => a.folderName.toLowerCase().localeCompare(b.folderName.toLowerCase(), "it"));
     if (patients.length) {
-      searchCard.classList.remove("disabled-block");
+      searchCard.classList.remove("disabled-block"); examCard.classList.remove("disabled-block");
       verifyBtn.disabled = false;
-      searchStatus.innerHTML = `Pronto: <b>${patients.length}</b> pazienti` +
-        (anyFs ? "." : `, <b>${pdfCount}</b> PDF.`);
+      searchStatus.innerHTML = `Pronto: <b>${patients.length}</b> pazienti` + (anyFs ? "." : `, <b>${pdfCount}</b> PDF.`);
     } else {
-      searchCard.classList.add("disabled-block");
+      searchCard.classList.add("disabled-block"); examCard.classList.add("disabled-block");
       verifyBtn.disabled = true;
       searchStatus.textContent = "Nessuna cartella paziente trovata. Verifica di aver scelto la cartella che contiene le sottocartelle COGNOME_SDO.";
     }
   }
 
-  // ---- STEP 1: riconciliazione elenco SDO ----
+  // ---- STEP 1: riconciliazione SDO ----
   function parseSdoList() {
     const seen = new Set(), out = [];
     for (const raw of sdoFilter.value.split(/[\s,;]+/)) {
-      const s = raw.trim();
-      if (!s) continue;
-      const k = s.toLowerCase();
-      if (seen.has(k)) continue;
+      const s = raw.trim(); if (!s) continue;
+      const k = s.toLowerCase(); if (seen.has(k)) continue;
       seen.add(k); out.push(s);
     }
     return out;
   }
-
   verifyBtn.addEventListener("click", () => {
     if (!patients.length) return;
     const list = parseSdoList();
-    if (!list.length) {
-      reconcileBox.innerHTML = '<div class="status">Inserisci il tuo elenco di SDO nel riquadro qui sopra.</div>';
-      verifyExportBtn.disabled = true; lastReconcile = null;
-      return;
-    }
+    if (!list.length) { reconcileBox.innerHTML = '<div class="status">Inserisci il tuo elenco di SDO nel riquadro qui sopra.</div>'; verifyExportBtn.disabled = true; lastReconcile = null; return; }
     const found = [], notFound = [];
     for (const sdo of list) {
       const p = patientsBySdo.get(sdo.toLowerCase());
-      if (p) found.push({ sdo, cognome: p.cognome });
-      else notFound.push(sdo);
+      if (p) found.push({ sdo, cognome: p.cognome }); else notFound.push(sdo);
     }
     lastReconcile = { found, notFound, total: list.length };
     verifyExportBtn.disabled = false;
-
     reconcileBox.innerHTML =
       `<div class="status"><b>${found.length}</b> SDO trovati su <b>${list.length}</b>` +
-      (notFound.length ? ` &middot; <span class="badge err">${notFound.length} non trovati</span>` : ' &middot; <span class="badge ok">tutti trovati</span>') +
-      `</div>
+      (notFound.length ? ` &middot; <span class="badge err">${notFound.length} non trovati</span>` : ' &middot; <span class="badge ok">tutti trovati</span>') + `</div>
       <div class="reconcile">
-        <div>
-          <h3>Trovati (${found.length})</h3>
-          <div class="codelist">${found.length
-            ? found.map((f) => `${esc(f.sdo)}  ${esc(f.cognome) || "(senza cognome)"}`).join("\n")
-            : "(nessuno)"}</div>
-        </div>
-        <div>
-          <h3>Non trovati (${notFound.length})</h3>
-          <div class="codelist">${notFound.length ? notFound.map(esc).join("\n") : "(nessuno)"}</div>
-        </div>
+        <div><h3>Trovati (${found.length})</h3><div class="codelist">${found.length ? found.map((f) => `${esc(f.sdo)}  ${esc(f.cognome) || "(senza cognome)"}`).join("\n") : "(nessuno)"}</div></div>
+        <div><h3>Non trovati (${notFound.length})</h3><div class="codelist">${notFound.length ? notFound.map(esc).join("\n") : "(nessuno)"}</div></div>
       </div>`;
   });
-
   verifyExportBtn.addEventListener("click", () => {
     if (!lastReconcile) return;
     const rows = ["SDO;Stato;Cognome"];
@@ -378,28 +357,56 @@
     downloadCsv(rows, "elenco_sdo.csv");
   });
 
-  // ---- Elenco PDF di un paziente (lazy + data file) ----
+  // ---- Elenco PDF di un paziente (lazy + data file, ordinati per data) ----
   async function listEntries(p) {
     if (p._entries) return p._entries;
     const raw = [];
     if (p.inputEntries) for (const e of p.inputEntries) raw.push(e);
     for (const dh of p.dirHandles) {
       for await (const h of dh.values()) {
-        if (h.kind === "file" && isPdf(h.name)) {
-          const handle = h;
-          raw.push({ name: h.name, getFile: () => handle.getFile() });
-        }
+        if (h.kind === "file" && isPdf(h.name)) { const handle = h; raw.push({ name: h.name, getFile: () => handle.getFile() }); }
       }
     }
-    // Recupera la data di ogni PDF (serve per la "prima data di assunzione").
     for (const e of raw) {
-      try { const f = await e.getFile(); e._file = f; e.lastModified = f.lastModified || 0; }
-      catch (_) { e.lastModified = 0; }
+      try { const f = await e.getFile(); e._file = f; e.lastModified = f.lastModified || 0; } catch (_) { e.lastModified = 0; }
     }
-    // Ordina per data crescente: cosi' la prima positivita' e' la piu' vecchia.
     raw.sort((a, b) => (a.lastModified - b.lastModified) || a.name.toLowerCase().localeCompare(b.name.toLowerCase(), "it"));
     p._entries = raw;
     return raw;
+  }
+
+  // ---- Lettura PDF: righe ricostruite per posizione + parole ----
+  function reconstructLines(content) {
+    const items = content.items.filter((it) => typeof it.str === "string" && it.str.trim().length);
+    items.sort((a, b) => (b.transform[5] - a.transform[5]) || (a.transform[4] - b.transform[4]));
+    const lines = [];
+    let cur = [], curY = null;
+    for (const it of items) {
+      const y = it.transform[5];
+      if (curY === null || Math.abs(y - curY) <= 3) { cur.push(it); if (curY === null) curY = y; }
+      else { lines.push(cur); cur = [it]; curY = y; }
+    }
+    if (cur.length) lines.push(cur);
+    return lines.map((arr) => arr.sort((a, b) => a.transform[4] - b.transform[4]).map((i) => i.str).join(" ").replace(/\s+/g, " ").trim()).filter(Boolean);
+  }
+
+  async function getPdfData(entry) {
+    const c = dataCache.get(entry);
+    if (c) return c;
+    const file = entry._file || await entry.getFile();
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: buf, disableAutoFetch: true, disableStream: true }).promise;
+    let lines = [];
+    for (let p = 1; p <= doc.numPages; p++) {
+      const page = await doc.getPage(p);
+      const content = await page.getTextContent();
+      lines = lines.concat(reconstructLines(content));
+      page.cleanup();
+    }
+    await doc.destroy();
+    const data = { words: tokenize(lines.join(" ")), lines };
+    dataCache.set(entry, data);
+    return data;
   }
 
   // ---- Tokenizzazione / Levenshtein / match ----
@@ -411,10 +418,7 @@
     if (m) for (const w of m) set.add(w);
     return set;
   }
-  function normalizeTerm(t) {
-    const m = (t || "").toLowerCase().match(WORD_RE);
-    return m ? m.join("") : "";
-  }
+  function normalizeTerm(t) { const m = (t || "").toLowerCase().match(WORD_RE); return m ? m.join("") : ""; }
   function withinDistance(a, b, max) {
     if (a === b) return true;
     const la = a.length, lb = b.length;
@@ -424,14 +428,12 @@
     let prev = new Array(lb + 1), curr = new Array(lb + 1);
     for (let j = 0; j <= lb; j++) prev[j] = j;
     for (let i = 1; i <= la; i++) {
-      curr[0] = i;
-      let rowMin = curr[0];
+      curr[0] = i; let rowMin = curr[0];
       const ca = a.charCodeAt(i - 1);
       for (let j = 1; j <= lb; j++) {
         const cost = ca === b.charCodeAt(j - 1) ? 0 : 1;
         const v = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
-        curr[j] = v;
-        if (v < rowMin) rowMin = v;
+        curr[j] = v; if (v < rowMin) rowMin = v;
       }
       if (rowMin > max) return false;
       const tmp = prev; prev = curr; curr = tmp;
@@ -452,197 +454,306 @@
     return found;
   }
 
-  async function getWords(entry) {
-    const cached = wordCache.get(entry);
-    if (cached) return cached;
-    const file = entry._file || await entry.getFile();
-    const buf = await file.arrayBuffer();
-    const doc = await pdfjsLib.getDocument({ data: buf, disableAutoFetch: true, disableStream: true }).promise;
-    let text = "";
-    for (let p = 1; p <= doc.numPages; p++) {
-      const page = await doc.getPage(p);
-      const content = await page.getTextContent();
-      text += " " + content.items.map((it) => it.str || "").join(" ");
-      page.cleanup();
+  // ---- Estrazione valori esami dalle righe ----
+  const NUM_RE = /-?\d{1,3}(?:\.\d{3})+(?:,\d+)?|-?\d+(?:[.,]\d+)?/g;
+  function parseNumber(raw) {
+    let s = raw.trim();
+    if (s.indexOf(",") >= 0) s = s.replace(/\./g, "").replace(",", ".");
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+    const v = parseFloat(s);
+    return isFinite(v) ? v : null;
+  }
+  function firstNumberAfter(line, fromIdx) {
+    const rest = line.slice(fromIdx);
+    NUM_RE.lastIndex = 0;
+    let m;
+    while ((m = NUM_RE.exec(rest))) {
+      const v = parseNumber(m[0]);
+      if (v != null) return v;
     }
-    await doc.destroy();
-    const words = tokenize(text);
-    wordCache.set(entry, words);
-    return words;
+    return null;
+  }
+  // posizione del nome esame nella riga (sinonimi brevi richiedono confine di parola)
+  function synIndex(lineLower, syn) {
+    if (syn.length <= 4 && /^[a-z]+$/.test(syn)) {
+      const re = new RegExp("(?<![a-z])" + syn + "(?![a-z])");
+      const m = re.exec(lineLower);
+      return m ? m.index + syn.length : -1;
+    }
+    const i = lineLower.indexOf(syn);
+    return i >= 0 ? i + syn.length : -1;
+  }
+  // Estrae i valori dei 4 esami da un elenco di righe (un PDF = una giornata).
+  function extractAnalytes(lines) {
+    const out = { ALP: null, AST: null, ALT: null, BIL: null };
+    for (const line of lines) {
+      const low = line.toLowerCase();
+      for (const a of ANALYTES) {
+        if (a.exclude.some((x) => low.indexOf(x) >= 0)) continue;
+        let bestIdx = -1;
+        for (const s of a.syn) { const idx = synIndex(low, s); if (idx >= 0 && (bestIdx < 0 || idx < bestIdx)) bestIdx = idx; }
+        if (bestIdx < 0) continue;
+        const v = firstNumberAfter(line, bestIdx);
+        if (v != null && (out[a.key] == null || v > out[a.key])) out[a.key] = v;
+      }
+    }
+    return out;
   }
 
   // ---- Date ----
   function pad(n) { return String(n).padStart(2, "0"); }
-  function fmtDate(ts) {
-    if (!ts) return "\u2014";
-    const d = new Date(ts);
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-  }
-  // Giorno PRIMA della creazione del PDF (PDF generato alle 7 del giorno dopo).
+  function fmtDate(ts) { if (!ts) return "\u2014"; const d = new Date(ts); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`; }
+  function fmtNum(v) { return v == null ? "\u2014" : String(v).replace(".", ","); }
   function assumptionTs(ts) { return ts ? ts - DAY_MS : 0; }
 
-  // ---- STEP 2: ricerca ----
+  function readTerms() { return $("terms").value.split(",").map(normalizeTerm).filter(Boolean); }
+  function targetsFromSdo() {
+    const sdoSet = new Set(parseSdoList().map((s) => s.toLowerCase()));
+    const targets = sdoSet.size ? patients.filter((p) => sdoSet.has(p.sdo.toLowerCase())) : patients.slice();
+    return { sdoSet, targets };
+  }
+
+  // ---- STEP 2: ricerca farmaco ----
   searchBtn.addEventListener("click", runSearch);
   stopBtn.addEventListener("click", () => { aborted = true; stopBtn.disabled = true; });
 
   async function runSearch() {
     if (running || !patients.length) return;
     if (!window.pdfjsLib) { searchStatus.innerHTML = '<span class="badge err">Libreria PDF non disponibile.</span>'; return; }
-
-    const terms = $("terms").value.split(",").map(normalizeTerm).filter(Boolean);
+    const terms = readTerms();
     if (!terms.length) { searchStatus.textContent = "Inserisci almeno un termine."; return; }
 
     const logic = document.querySelector('input[name="logic"]:checked').value;
     const maxTypos = parseInt($("typos").value, 10);
     const stopFirst = $("stopFirst").checked;
-    const sdoSet = new Set(parseSdoList().map((s) => s.toLowerCase()));
     const uniqueTermCount = new Set(terms).size;
+    const { sdoSet, targets } = targetsFromSdo();
 
-    const targets = sdoSet.size ? patients.filter((p) => sdoSet.has(p.sdo.toLowerCase())) : patients.slice();
+    running = true; aborted = false; lastResults = [];
+    searchBtn.disabled = true; exportBtn.disabled = true; stopBtn.disabled = false; examBtn.disabled = true;
+    initResultsTable(); setBar(searchBar, 0);
+    if (!targets.length) { searchStatus.textContent = sdoSet.size ? "Nessun paziente corrisponde agli SDO indicati." : "Nessun paziente."; finishSearchUI(); return; }
 
-    running = true; aborted = false;
-    lastResults = [];
-    searchBtn.disabled = true; exportBtn.disabled = true; stopBtn.disabled = false;
-    initResultsTable();
-    setBar(searchBar, 0);
-
-    if (!targets.length) {
-      searchStatus.textContent = sdoSet.size ? "Nessun paziente corrisponde agli SDO indicati." : "Nessun paziente.";
-      finishUI(); return;
-    }
-
-    // Fase A: elenco PDF + date (apre solo le cartelle bersaglio).
     searchStatus.textContent = "Preparazione elenco file\u2026";
-    const queue = [];
-    let prepDone = 0, pi = 0;
+    const queue = []; let prepDone = 0, pi = 0;
     async function prepWorker() {
       while (pi < targets.length && !aborted) {
         const p = targets[pi++];
         p._matched = []; p._done = false; p._finalized = false;
-        let entries;
-        try { entries = await listEntries(p); } catch (e) { entries = []; }
+        let entries; try { entries = await listEntries(p); } catch (e) { entries = []; }
         p._remaining = entries.length;
         for (const e of entries) queue.push({ p, e });
         prepDone++;
-        if (prepDone % 25 === 0 || prepDone === targets.length) {
-          searchStatus.textContent = `Preparazione elenco file: ${prepDone}/${targets.length} cartelle\u2026`;
-          await sleep(0);
-        }
+        if (prepDone % 25 === 0 || prepDone === targets.length) { searchStatus.textContent = `Preparazione elenco file: ${prepDone}/${targets.length} cartelle\u2026`; await sleep(0); }
       }
     }
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, prepWorker));
 
     const total = queue.length;
-    if (total === 0) { searchStatus.textContent = "Nessun PDF trovato nelle cartelle selezionate."; finishUI(); return; }
+    if (total === 0) { searchStatus.textContent = "Nessun PDF trovato nelle cartelle selezionate."; finishSearchUI(); return; }
 
-    // Fase B: lettura + ricerca in parallelo.
     let processed = 0, errors = 0, positives = 0;
     const t0 = performance.now();
     const updateUI = () => {
       setBar(searchBar, (processed / total) * 100);
-      const secs = (performance.now() - t0) / 1000;
-      const rate = processed > 0 ? processed / secs : 0;
+      const secs = (performance.now() - t0) / 1000, rate = processed > 0 ? processed / secs : 0;
       const eta = rate > 0 ? Math.max(0, Math.round((total - processed) / rate)) : 0;
-      searchStatus.innerHTML =
-        `Letti <b>${processed}</b>/<b>${total}</b> PDF &middot; <b>${positives}</b> pazienti positivi` +
+      searchStatus.innerHTML = `Letti <b>${processed}</b>/<b>${total}</b> PDF &middot; <b>${positives}</b> pazienti positivi` +
         (errors ? ` &middot; <span class="badge err">${errors} non leggibili</span>` : "") +
         (processed < total ? ` &middot; ~${eta}s rimanenti` : ` &middot; completato in ${secs.toFixed(1)}s`);
     };
     const finalize = (p) => {
       if (p._finalized || !p._matched.length) return;
       p._finalized = true; positives++;
-      // PDF positivo piu' vecchio -> prima data di assunzione.
       const matched = p._matched.slice().sort((a, b) => a.entry.lastModified - b.entry.lastModified);
       const firstTs = matched[0].entry.lastModified;
       const res = { patient: p, matchedPdfs: matched, firstPdfTs: firstTs, assumptionTs: assumptionTs(firstTs) };
-      lastResults.push(res); appendResultRow(res); resCount.textContent = `(${positives})`;
+      lastResults.push(res); appendResultRow(res);
     };
-
     let qi = 0;
     async function readWorker() {
       while (qi < queue.length && !aborted) {
         const { p, e } = queue[qi++];
         if (p._done) { p._remaining--; processed++; continue; }
-        let words;
-        try { words = await getWords(e); } catch (err) { words = new Set(); errors++; }
+        let words; try { words = (await getPdfData(e)).words; } catch (err) { words = new Set(); errors++; }
         processed++; p._remaining--;
         const found = matchPdf(words, terms, maxTypos);
         const positive = logic === "OR" ? found.size > 0 : found.size === uniqueTermCount;
-        if (positive) {
-          p._matched.push({ entry: e, terms: [...found] });
-          if (stopFirst) { p._done = true; finalize(p); }
-        }
+        if (positive) { p._matched.push({ entry: e, terms: [...found] }); if (stopFirst) { p._done = true; finalize(p); } }
         if (!p._done && p._remaining === 0) finalize(p);
         if (processed % 5 === 0 || processed === total) { updateUI(); await sleep(0); }
       }
     }
-
     updateUI();
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, readWorker));
     for (const p of targets) if (!p._done && p._remaining === 0) finalize(p);
-
-    setBar(searchBar, 100);
-    updateUI();
+    setBar(searchBar, 100); updateUI();
     if (aborted) searchStatus.innerHTML += ' &middot; <span class="badge">interrotto</span>';
     if (!lastResults.length) resultsBox.innerHTML = '<div class="empty">Nessun paziente positivo per questa ricerca.</div>';
-    finishUI();
+    finishSearchUI();
   }
+  function finishSearchUI() { running = false; searchBtn.disabled = false; stopBtn.disabled = true; examBtn.disabled = false; exportBtn.disabled = lastResults.length === 0; }
 
-  function finishUI() {
-    running = false;
-    searchBtn.disabled = false; stopBtn.disabled = true;
-    exportBtn.disabled = lastResults.length === 0;
-  }
-
-  // ---- Tabella risultati ----
   let tbodyEl = null;
   function initResultsTable() {
-    resCount.textContent = "(0)";
     resultsBox.innerHTML = "";
     const table = document.createElement("table");
     table.innerHTML = "<thead><tr><th>Cognome</th><th>SDO</th><th class='nowrap'>Prima assunzione</th><th class='nowrap'>PDF positivi</th><th>Termini trovati</th></tr></thead>";
-    tbodyEl = document.createElement("tbody");
-    table.appendChild(tbodyEl);
-    resultsBox.appendChild(table);
+    tbodyEl = document.createElement("tbody"); table.appendChild(tbodyEl); resultsBox.appendChild(table);
   }
-
   function appendResultRow(res) {
-    const tr = document.createElement("tr");
-    tr.className = "patient";
+    const tr = document.createElement("tr"); tr.className = "patient";
     const termini = [...new Set(res.matchedPdfs.flatMap((m) => m.terms))];
-    tr.innerHTML =
-      `<td>${esc(res.patient.cognome) || "<i>(senza cognome)</i>"}</td>` +
-      `<td>${esc(res.patient.sdo)}</td>` +
-      `<td class="dataprima nowrap">${fmtDate(res.assumptionTs)}</td>` +
-      `<td style="text-align:center">${res.matchedPdfs.length}</td>` +
+    tr.innerHTML = `<td>${esc(res.patient.cognome) || "<i>(senza cognome)</i>"}</td><td>${esc(res.patient.sdo)}</td>` +
+      `<td class="dataprima nowrap">${fmtDate(res.assumptionTs)}</td><td style="text-align:center">${res.matchedPdfs.length}</td>` +
       `<td>${termini.map((t) => `<span class="pill">${esc(t)}</span>`).join("")}</td>`;
-
-    const detail = document.createElement("tr");
-    detail.className = "pdflist";
-    detail.style.display = "none";
-    const td = document.createElement("td");
-    td.colSpan = 5;
-    td.innerHTML =
-      `<div><b>Cartella:</b> ${esc(res.patient.folderName)}</div>` +
-      `<div style='margin-top:6px'><b>Prima data di assunzione:</b> <span class="dataprima">${fmtDate(res.assumptionTs)}</span> ` +
-      `<span class="hint">(PDF creato il ${fmtDate(res.firstPdfTs)})</span></div>` +
-      "<div style='margin-top:6px'><b>PDF (giornate) positive &ndash; clicca per aprire:</b></div>" +
-      "<ul style='margin:6px 0 0 18px'>" +
-      res.matchedPdfs.map((m) =>
-        `<li><a data-open="1">${esc(m.entry.name)}</a> ` +
-        `<span class="hint">&middot; assunzione ${fmtDate(assumptionTs(m.entry.lastModified))} ` +
-        `(PDF ${fmtDate(m.entry.lastModified)}) &middot; [${m.terms.map(esc).join(", ")}]</span></li>`).join("") +
-      "</ul>";
+    const detail = document.createElement("tr"); detail.className = "pdflist"; detail.style.display = "none";
+    const td = document.createElement("td"); td.colSpan = 5;
+    td.innerHTML = `<div><b>Cartella:</b> ${esc(res.patient.folderName)}</div>` +
+      `<div style='margin-top:6px'><b>Prima data di assunzione:</b> <span class="dataprima">${fmtDate(res.assumptionTs)}</span> <span class="hint">(PDF creato il ${fmtDate(res.firstPdfTs)})</span></div>` +
+      "<div style='margin-top:6px'><b>PDF positivi &ndash; clicca per aprire:</b></div><ul style='margin:6px 0 0 18px'>" +
+      res.matchedPdfs.map((m) => `<li><a data-open="1">${esc(m.entry.name)}</a> <span class="hint">&middot; assunzione ${fmtDate(assumptionTs(m.entry.lastModified))} (PDF ${fmtDate(m.entry.lastModified)}) &middot; [${m.terms.map(esc).join(", ")}]</span></li>`).join("") + "</ul>";
     detail.appendChild(td);
-
     tr.addEventListener("click", () => { detail.style.display = detail.style.display === "none" ? "" : "none"; });
-    td.querySelectorAll('a[data-open]').forEach((a, k) => {
-      a.addEventListener("click", async (ev) => { ev.stopPropagation(); await openEntry(res.matchedPdfs[k].entry); });
-    });
-
-    tbodyEl.appendChild(tr);
-    tbodyEl.appendChild(detail);
+    td.querySelectorAll('a[data-open]').forEach((a, k) => { a.addEventListener("click", async (ev) => { ev.stopPropagation(); await openEntry(res.matchedPdfs[k].entry); }); });
+    tbodyEl.appendChild(tr); tbodyEl.appendChild(detail);
   }
+
+  exportBtn.addEventListener("click", () => {
+    if (!lastResults.length) return;
+    const rows = ["Cognome;SDO;Prima assunzione;PDF positivi;Termini trovati;Cartella;File positivi"];
+    for (const r of lastResults) {
+      const termini = [...new Set(r.matchedPdfs.flatMap((m) => m.terms))].join(" ");
+      const files = r.matchedPdfs.map((m) => `${m.entry.name} (${fmtDate(m.entry.lastModified)})`).join(" | ");
+      rows.push([csv(r.patient.cognome), csv(r.patient.sdo), fmtDate(r.assumptionTs), r.matchedPdfs.length, csv(termini), csv(r.patient.folderName), csv(files)].join(";"));
+    }
+    downloadCsv(rows, "risultati_ricerca.csv");
+  });
+
+  // ---- STEP 3: analisi esami (tutti i pazienti dell'elenco) ----
+  examBtn.addEventListener("click", runExams);
+  examStopBtn.addEventListener("click", () => { aborted = true; examStopBtn.disabled = true; });
+
+  async function runExams() {
+    if (running || !patients.length) return;
+    if (!window.pdfjsLib) { examStatus.innerHTML = '<span class="badge err">Libreria PDF non disponibile.</span>'; return; }
+    const terms = readTerms();           // per la colonna farmaco (perampanel)
+    const logic = document.querySelector('input[name="logic"]:checked').value;
+    const maxTypos = parseInt($("typos").value, 10);
+    const uniqueTermCount = new Set(terms).size;
+    const { sdoSet, targets } = targetsFromSdo();
+
+    running = true; aborted = false; lastExam = [];
+    examBtn.disabled = true; examExportBtn.disabled = true; examStopBtn.disabled = false; searchBtn.disabled = true;
+    initExamTable(); setBar(examBar, 0);
+    if (!targets.length) { examStatus.textContent = sdoSet.size ? "Nessun paziente corrisponde agli SDO indicati." : "Nessun paziente."; finishExamUI(); return; }
+
+    examStatus.textContent = "Preparazione elenco file\u2026";
+    const queue = []; let pi = 0;
+    async function prepWorker() {
+      while (pi < targets.length && !aborted) {
+        const p = targets[pi++];
+        p._peaks = { ALP: { v: null, ts: 0 }, AST: { v: null, ts: 0 }, ALT: { v: null, ts: 0 }, BIL: { v: null, ts: 0 } };
+        p._peramPositive = false; p._peramFirstTs = 0; p._remaining = 0;
+        let entries; try { entries = await listEntries(p); } catch (e) { entries = []; }
+        p._remaining = entries.length;
+        for (const e of entries) queue.push({ p, e });
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, prepWorker));
+
+    const total = queue.length;
+    if (total === 0) { examStatus.textContent = "Nessun PDF trovato nelle cartelle selezionate."; finishExamUI(); return; }
+
+    let processed = 0, errors = 0, doneP = 0;
+    const t0 = performance.now();
+    const updateUI = () => {
+      setBar(examBar, (processed / total) * 100);
+      const secs = (performance.now() - t0) / 1000, rate = processed > 0 ? processed / secs : 0;
+      const eta = rate > 0 ? Math.max(0, Math.round((total - processed) / rate)) : 0;
+      examStatus.innerHTML = `Letti <b>${processed}</b>/<b>${total}</b> PDF &middot; pazienti completati <b>${doneP}</b>/<b>${targets.length}</b>` +
+        (errors ? ` &middot; <span class="badge err">${errors} non leggibili</span>` : "") +
+        (processed < total ? ` &middot; ~${eta}s rimanenti` : ` &middot; completato in ${secs.toFixed(1)}s`);
+    };
+    const finalize = (p) => {
+      if (p._finalized) return; p._finalized = true; doneP++;
+      const row = {
+        patient: p,
+        peram: p._peramPositive,
+        assumptionTs: p._peramPositive ? assumptionTs(p._peramFirstTs) : 0,
+        peaks: {
+          ALP: { v: p._peaks.ALP.v, ts: assumptionTs(p._peaks.ALP.ts) },
+          AST: { v: p._peaks.AST.v, ts: assumptionTs(p._peaks.AST.ts) },
+          ALT: { v: p._peaks.ALT.v, ts: assumptionTs(p._peaks.ALT.ts) },
+          BIL: { v: p._peaks.BIL.v, ts: assumptionTs(p._peaks.BIL.ts) }
+        }
+      };
+      lastExam.push(row); appendExamRow(row);
+    };
+    let qi = 0;
+    async function readWorker() {
+      while (qi < queue.length && !aborted) {
+        const { p, e } = queue[qi++];
+        let data; try { data = await getPdfData(e); } catch (err) { data = { words: new Set(), lines: [] }; errors++; }
+        processed++; p._remaining--;
+        // farmaco
+        if (terms.length) {
+          const found = matchPdf(data.words, terms, maxTypos);
+          const positive = logic === "OR" ? found.size > 0 : found.size === uniqueTermCount;
+          if (positive) { p._peramPositive = true; if (!p._peramFirstTs || e.lastModified < p._peramFirstTs) p._peramFirstTs = e.lastModified; }
+        }
+        // esami: picco per ogni analita
+        const vals = extractAnalytes(data.lines);
+        for (const key of ["ALP", "AST", "ALT", "BIL"]) {
+          const v = vals[key];
+          if (v != null && (p._peaks[key].v == null || v > p._peaks[key].v)) { p._peaks[key] = { v, ts: e.lastModified }; }
+        }
+        if (p._remaining === 0) finalize(p);
+        if (processed % 5 === 0 || processed === total) { updateUI(); await sleep(0); }
+      }
+    }
+    updateUI();
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, readWorker));
+    for (const p of targets) if (p._remaining === 0) finalize(p);
+    setBar(examBar, 100); updateUI();
+    if (aborted) examStatus.innerHTML += ' &middot; <span class="badge">interrotto</span>';
+    if (!lastExam.length) examBox.innerHTML = '<div class="empty">Nessun dato.</div>';
+    finishExamUI();
+  }
+  function finishExamUI() { running = false; examBtn.disabled = false; examStopBtn.disabled = true; searchBtn.disabled = false; examExportBtn.disabled = lastExam.length === 0; }
+
+  let examTbody = null;
+  function initExamTable() {
+    examBox.innerHTML = "";
+    const table = document.createElement("table");
+    table.innerHTML = "<thead><tr><th>Cognome</th><th>SDO</th><th>Perampanel</th><th class='nowrap'>Prima assunzione</th>" +
+      "<th class='num'>Picco ALP</th><th class='nowrap'>Data ALP</th>" +
+      "<th class='num'>Picco AST</th><th class='nowrap'>Data AST</th>" +
+      "<th class='num'>Picco ALT</th><th class='nowrap'>Data ALT</th>" +
+      "<th class='num'>Picco Bilirubina</th><th class='nowrap'>Data Bilirubina</th></tr></thead>";
+    examTbody = document.createElement("tbody"); table.appendChild(examTbody); examBox.appendChild(table);
+  }
+  function appendExamRow(r) {
+    const tr = document.createElement("tr");
+    const peram = r.peram ? '<span class="yes">Sì</span>' : '<span class="no">No</span>';
+    tr.innerHTML = `<td>${esc(r.patient.cognome) || "<i>(senza cognome)</i>"}</td><td>${esc(r.patient.sdo)}</td>` +
+      `<td>${peram}</td><td class="nowrap">${r.peram ? fmtDate(r.assumptionTs) : "\u2014"}</td>` +
+      `<td class="num">${fmtNum(r.peaks.ALP.v)}</td><td class="nowrap">${fmtDate(r.peaks.ALP.ts)}</td>` +
+      `<td class="num">${fmtNum(r.peaks.AST.v)}</td><td class="nowrap">${fmtDate(r.peaks.AST.ts)}</td>` +
+      `<td class="num">${fmtNum(r.peaks.ALT.v)}</td><td class="nowrap">${fmtDate(r.peaks.ALT.ts)}</td>` +
+      `<td class="num">${fmtNum(r.peaks.BIL.v)}</td><td class="nowrap">${fmtDate(r.peaks.BIL.ts)}</td>`;
+    examTbody.appendChild(tr);
+  }
+  examExportBtn.addEventListener("click", () => {
+    if (!lastExam.length) return;
+    const rows = ["Cognome;SDO;Perampanel;Prima assunzione;Picco ALP;Data ALP;Picco AST;Data AST;Picco ALT;Data ALT;Picco Bilirubina;Data Bilirubina"];
+    for (const r of lastExam) {
+      rows.push([csv(r.patient.cognome), csv(r.patient.sdo), r.peram ? "Si" : "No", r.peram ? fmtDate(r.assumptionTs) : "",
+        fmtNum(r.peaks.ALP.v), fmtDate(r.peaks.ALP.ts), fmtNum(r.peaks.AST.v), fmtDate(r.peaks.AST.ts),
+        fmtNum(r.peaks.ALT.v), fmtDate(r.peaks.ALT.ts), fmtNum(r.peaks.BIL.v), fmtDate(r.peaks.BIL.ts)].join(";"));
+    }
+    downloadCsv(rows, "esami_laboratorio.csv");
+  });
 
   async function openEntry(entry) {
     try {
@@ -650,38 +761,18 @@
       const url = URL.createObjectURL(file);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch (e) {
-      alert("Impossibile aprire il PDF: " + (e.message || e));
-    }
+    } catch (e) { alert("Impossibile aprire il PDF: " + (e.message || e)); }
   }
-
-  // ---- Esportazione risultati ----
-  exportBtn.addEventListener("click", () => {
-    if (!lastResults.length) return;
-    const rows = ["Cognome;SDO;Prima assunzione;PDF positivi;Termini trovati;Cartella;File positivi"];
-    for (const r of lastResults) {
-      const termini = [...new Set(r.matchedPdfs.flatMap((m) => m.terms))].join(" ");
-      const files = r.matchedPdfs.map((m) => `${m.entry.name} (${fmtDate(m.entry.lastModified)})`).join(" | ");
-      rows.push([csv(r.patient.cognome), csv(r.patient.sdo), fmtDate(r.assumptionTs),
-        r.matchedPdfs.length, csv(termini), csv(r.patient.folderName), csv(files)].join(";"));
-    }
-    downloadCsv(rows, "risultati_ricerca.csv");
-  });
 
   // ---- Utilita' ----
   function downloadCsv(rows, name) {
     const blob = new Blob(["\uFEFF" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
   function setBar(el, pct) { el.style.width = Math.max(0, Math.min(100, pct)) + "%"; }
   function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
-  function esc(s) {
-    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   function csv(s) { return String(s == null ? "" : s).replace(/;/g, ",").replace(/[\r\n]+/g, " "); }
 
   refreshMode();

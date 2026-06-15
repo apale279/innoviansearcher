@@ -36,7 +36,7 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
    - La ricerca viene fatta **sui pazienti del tuo elenco trovati al passo 1**
      (se l'elenco è vuoto, cerca in tutti). Premi **"Cerca"**: i risultati
      compaiono in tempo reale; con **"Ferma"** puoi interrompere.
-4. **Passo 3 – Pazienti positivi**
+4. **Passo 2 – Pazienti positivi**
    - Tabella con Cognome, SDO, **Prima assunzione**, numero di PDF positivi e
      termini trovati.
    - **Prima assunzione** = il giorno **precedente** alla creazione del PDF
@@ -46,6 +46,31 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
      l'elenco dei PDF positivi con la rispettiva data; **clicca sul nome di un
      PDF** per aprirlo.
    - Con **"Esporta risultati (CSV)"** salvi l'elenco (apribile in Excel).
+5. **Passo 3 – Esami di laboratorio**
+   - Premi **"Analizza esami"**: per **ogni** paziente dell'elenco (preso o no il
+     farmaco) l'app legge tutte le tabelle dei PDF ed estrae, per **ALP, AST,
+     ALT, Bilirubina**, il **valore di picco** e la **data del picco** (= giorno
+     precedente alla creazione del PDF in cui si è raggiunto il picco).
+   - La tabella indica anche se il paziente è **positivo al farmaco** del passo 2
+     e la **prima data di assunzione**.
+   - Con **"Esporta tabella esami (CSV)"** salvi tutto.
+
+### Nomi alternativi degli esami (adattabili)
+
+Gli esami nelle tabelle dei PDF possono avere nomi diversi. L'app riconosce già
+diversi sinonimi:
+
+- **ALP**: `fosfatasi alcalina`, `fosf alcalina`, `alkaline phosphatase`, `alp`, `alkp`
+- **AST**: `aspartato aminotransferasi`, `aspartato transaminasi`, `ast`, `got`, `sgot`
+- **ALT**: `alanina aminotransferasi`, `alanina transaminasi`, `alt`, `gpt`, `sgpt`
+- **Bilirubina**: `bilirubina totale`, `bilirubina`, `bil tot`, `bilt`, `tbil`
+  (esclude le righe con `diretta`, `indiretta`, `coniugata`, `frazionata`)
+
+Questi elenchi sono nella costante `ANALYTES` all'inizio dello script in
+`index.html` e si possono modificare facilmente. **Per massima precisione, invia
+un PDF/tabella di esempio**: si calibrano nomi e posizione dei valori sul formato
+reale. Il valore preso è il **primo numero che segue il nome dell'esame nella
+stessa riga** della tabella (le righe vengono ricostruite per posizione).
 
 ### Consigli con tante cartelle (es. 4000+ cartelle su disco di rete)
 
@@ -71,6 +96,7 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
 |---|---|
 | **Verifica elenco SDO** (trovati / non trovati) | Passo 1: confronta il tuo elenco con le cartelle e mostra/esporta gli SDO trovati e quelli mancanti. |
 | **Prima data di assunzione** | Giorno precedente alla creazione del PDF positivo più vecchio (PDF generato alle 7 del giorno dopo). I PDF di ogni paziente vengono ordinati per data, così la prima positività è la più vecchia. |
+| **Esami: picco + data** per ALP, AST, ALT, Bilirubina | Passo 3: per ogni paziente dell'elenco, valore massimo e giorno del picco estratti dalle tabelle dei PDF (nomi alternativi riconosciuti). |
 | Una o due cartelle (mediche / infermieristiche) | Selettore di modalità; con due cartelle i pazienti con lo stesso SDO vengono uniti. |
 | Barra di avanzamento | Mostrata durante la lettura dei PDF, con risultati in tempo reale. |
 | Ricerca AND / OR | OR = almeno un termine; AND = tutti i termini nello stesso PDF. |
