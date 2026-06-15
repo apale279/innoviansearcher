@@ -1,109 +1,84 @@
 # InnovianSearcher
 
-Applicazione **desktop in Java** che gira **solo sul tuo computer**, in locale,
-**senza alcun server** (nemmeno locale). Serve per cercare termini all'interno
-dei PDF contenuti nelle cartelle dei pazienti.
+Pagina **HTML** che cerca termini nei PDF delle cartelle dei pazienti.
+Funziona **interamente nel tuo browser, in locale**: niente installazione,
+niente programmi da configurare, **nessun server** (nemmeno locale).
 
-Ogni paziente ha una sua cartella con dentro vari PDF; ogni PDF contiene i dati
-di una giornata di ricovero. Le cartelle sono nominate nel formato
-**`COGNOME_SDO`** (esempio: `ROSSI_12345`).
+Ogni paziente ha una cartella con dentro vari PDF (un PDF = una giornata di
+ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
 
-> I file dei pazienti restano sul tuo computer: l'app non invia nulla su Internet
-> (il collegamento serve solo la prima volta, per scaricare i componenti necessari
-> alla costruzione del programma).
-
----
-
-## Cosa sa fare
-
-- **Una o due cartelle**
-  - *Diarie mediche*: selezioni **una** cartella.
-  - *Diarie infermieristiche*: selezioni **due** cartelle (i pazienti con lo
-    stesso numero SDO vengono uniti automaticamente).
-  - Quando carichi gli indici, una **barra di avanzamento** mostra la progressione.
-
-- **Ricerca dei termini con logica AND / OR**
-  - **OR**: il paziente è positivo se almeno uno dei termini è presente.
-  - **AND**: il paziente è positivo se in uno stesso PDF (una stessa giornata)
-    sono presenti **tutti** i termini.
-  - Le **maiuscole/minuscole vengono sempre ignorate**.
-  - Per ogni termine si tiene conto dei **possibili errori di battitura fino a 2
-    lettere** (impostazione regolabile da 0 a 2).
-
-- **Comportamento alla prima positività**
-  - *Fermati al primo PDF positivo per paziente*: appena trova una positività
-    passa al paziente successivo (non legge gli altri PDF di quel paziente).
-  - Se togli la spunta, controlla **tutti** i PDF del paziente e conta quante
-    giornate risultano positive.
-
-- **Filtro per numero di SDO**
-  - Puoi incollare un elenco di SDO (uno per riga oppure separati da virgola):
-    la ricerca si limita a quei pazienti. Se lasci il campo vuoto, cerca in tutti.
-
-- **Elenco dei positivi con collegamento alla cartella**
-  - I pazienti positivi compaiono in una tabella (Cognome, SDO, numero di PDF
-    positivi, termini trovati).
-  - Con **doppio clic** su una riga, oppure con il pulsante **"Apri cartella
-    paziente"**, apri direttamente la cartella del paziente.
-  - Puoi anche **esportare i risultati in un file CSV**.
+> **I file restano sul tuo computer.** I PDF non vengono caricati da nessuna
+> parte: vengono letti solo nella memoria del browser. L'unica cosa che arriva
+> da Internet è la libreria che legge i PDF (`pdf.js`), e solo al primo utilizzo;
+> poi resta nella cache del browser.
 
 ---
 
-## Come si avvia (guida per chi non programma)
+## Come si usa (niente da installare)
 
-### 1. Installa Java (una sola volta)
-
-Serve **Java 17 o successivo**. Per verificare se è già installato, apri il
-Prompt dei comandi (Windows) o il Terminale (Mac) e scrivi:
-
-```
-java -version
-```
-
-Se compare un numero **17** o superiore, sei a posto. Altrimenti scarica e
-installa Java gratuito da: <https://adoptium.net> (scegli la versione "Temurin 21").
-
-### 2. Avvia l'applicazione
-
-Scarica/copia questa cartella sul tuo computer, poi:
-
-- **Windows**: fai doppio clic sul file **`run.bat`**.
-- **Mac / Linux**: fai doppio clic su **`run.sh`** (oppure, dal Terminale dentro
-  la cartella, esegui `./run.sh`).
-
-> Il **primo avvio** costruisce il programma e richiede un collegamento a
-> Internet e qualche minuto. Dai successivi avvii l'app parte subito.
-
----
-
-## Come si usa
-
-1. **Tipo di cartelle**: scegli *Diarie mediche (1 cartella)* oppure *Diarie
-   infermieristiche (2 cartelle)*.
-2. Premi **"Sfoglia…"** e seleziona la cartella che contiene **le cartelle dei
-   pazienti** (quelle con nome `COGNOME_SDO`). In modalità infermieristiche
-   seleziona anche la seconda cartella.
-3. Premi **"Carica indici"** e attendi che la barra arrivi in fondo.
-4. Inserisci i **termini** da cercare separati da virgola (es. `febbre, tosse`).
-5. Scegli **OR** o **AND**, regola gli **errori di battitura tollerati**, e
-   decidi se **fermarti al primo PDF positivo**.
-6. (Facoltativo) Incolla l'elenco di **SDO** da considerare.
-7. Premi **"Cerca"**: i pazienti positivi compaiono nella tabella in basso.
-8. Doppio clic su un paziente per **aprire la sua cartella**, oppure usa
-   **"Esporta risultati (CSV)"**.
+1. Apri il file **`index.html`** con un doppio clic (si apre nel browser).
+   Va bene **Chrome**, **Edge** o **Firefox** aggiornati.
+2. **Passo 1 – Scegli le cartelle**
+   - Seleziona *Diarie mediche (1 cartella)* oppure *Diarie infermieristiche
+     (2 cartelle)*.
+   - Premi sul selettore e scegli la **cartella che contiene le cartelle dei
+     pazienti** (`COGNOME_SDO`). Il browser chiederà conferma a leggere la
+     cartella: accetta.
+   - Premi **"Carica indici"**: una **barra di avanzamento** mostra la lettura
+     dei PDF. (Si fa una volta sola; poi le ricerche sono immediate.)
+3. **Passo 2 – Imposta la ricerca**
+   - Scrivi i **termini** separati da virgola (es. `febbre, tosse`).
+   - Scegli **OR** (almeno un termine) o **AND** (tutti i termini nello stesso
+     PDF). Le **maiuscole/minuscole sono sempre ignorate**.
+   - Imposta gli **errori di battitura tollerati** (0, 1 o 2): tiene conto dei
+     refusi (es. *febre* trova *febbre*).
+   - Spunta o togli **"Fermati al primo PDF positivo per paziente"**.
+   - (Facoltativo) incolla un elenco di **SDO** per limitare la ricerca a quei
+     pazienti; lascia vuoto per cercarli tutti.
+   - Premi **"Cerca"**.
+4. **Passo 3 – Pazienti positivi**
+   - Compare la tabella con Cognome, SDO, numero di PDF positivi e termini
+     trovati.
+   - **Clicca su una riga** per vedere il nome della cartella e l'elenco dei PDF
+     (giornate) positivi; **clicca sul nome di un PDF per aprirlo** in una nuova
+     scheda.
+   - Con **"Esporta risultati (CSV)"** salvi l'elenco (apribile in Excel).
 
 ---
 
-## Note tecniche
+## Le funzioni richieste
 
-- Linguaggio: **Java** (interfaccia grafica Swing), nessun server.
-- Lettura PDF: libreria **Apache PDFBox**.
-- Ricerca con tolleranza ai refusi: **distanza di Levenshtein** (fino a 2 errori).
-- Costruzione: **Maven** (incluso tramite *Maven Wrapper*, non serve installarlo).
+| Richiesta | Come funziona |
+|---|---|
+| Una o due cartelle (mediche / infermieristiche) | Selettore di modalità; con due cartelle i pazienti con lo stesso SDO vengono uniti. |
+| Barra di avanzamento al caricamento | Mostrata durante la lettura dei PDF. |
+| Ricerca AND / OR | OR = almeno un termine; AND = tutti i termini nello stesso PDF. |
+| Ignora maiuscole/minuscole | Sempre attivo. |
+| Errore di scrittura fino a 2 lettere | Distanza di *Levenshtein* (regolabile 0–2). |
+| Fermarsi alla prima positività o leggere tutto | Opzione "Fermati al primo PDF positivo per paziente". |
+| Filtro per numero di SDO | Campo dove incollare gli SDO (cartelle `COGNOME_SDO`). |
+| Lista dei positivi con collegamento | Tabella + apertura diretta dei PDF positivi + esportazione CSV. |
 
-### Avvio manuale (per utenti esperti)
+---
 
-```bash
-./mvnw clean package          # genera target/InnovianSearcher.jar
-java -jar target/InnovianSearcher.jar
-```
+## Note e limiti (importanti)
+
+- Per motivi di **sicurezza del browser**, una pagina HTML **non può aprire la
+  cartella nel gestore file del sistema operativo**. Per questo i collegamenti
+  aprono direttamente i **PDF positivi** (la cosa più utile) e viene mostrato il
+  nome della cartella del paziente.
+- Struttura attesa delle cartelle: `cartella scelta` → `COGNOME_SDO` → file PDF.
+  L'SDO è la parte dopo l'ultimo trattino basso `_` (così funzionano anche
+  cognomi composti come `DE_LUCA_999`).
+- Tutto avviene in locale nel browser; con molti PDF la prima indicizzazione può
+  richiedere un po' di tempo, ma poi la ricerca è immediata.
+
+---
+
+## Dettagli tecnici
+
+- Una sola pagina: **`index.html`** (HTML + CSS + JavaScript, nessuna dipendenza
+  da installare).
+- Lettura PDF nel browser con **pdf.js** (caricata da CDN, poi in cache).
+- Selezione cartelle con l'attributo `webkitdirectory` dei browser.
+- Ricerca con tolleranza ai refusi tramite **distanza di Levenshtein** (≤ 2).
