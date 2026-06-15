@@ -7,7 +7,7 @@
 <style>
   :root{
     --blu:#1f6feb; --blu-scuro:#0b4ea2; --bg:#f4f6f9; --bordo:#d6dbe3;
-    --testo:#1c2430; --grigio:#5b6675; --ok:#1a7f37; --warn:#9a6700;
+    --testo:#1c2430; --grigio:#5b6675; --ok:#1a7f37; --warn:#9a6700; --rosso:#b42318;
   }
   *{box-sizing:border-box}
   body{
@@ -29,7 +29,7 @@
     width:100%; padding:9px 11px; border:1px solid var(--bordo); border-radius:8px; font:inherit; background:#fff;
   }
   textarea{resize:vertical; min-height:70px;}
-  .filebox{display:flex; align-items:center; gap:10px; cursor:default;}
+  .filebox{display:flex; align-items:center; gap:10px;}
   .controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center; margin-top:6px;}
   .controls label{display:inline-flex; align-items:center; gap:6px; font-weight:500; margin:0;}
   button{
@@ -40,13 +40,15 @@
   button:disabled{background:#aab3c0; cursor:not-allowed}
   button.secondary{background:#eef1f6; color:var(--testo); border:1px solid var(--bordo);}
   button.secondary:hover{background:#e2e7f0}
-  .progress{height:14px; background:#e7ebf2; border-radius:7px; overflow:hidden; margin-top:10px;}
-  .progress > div{height:100%; width:0; background:var(--blu); transition:width .15s;}
-  .status{font-size:13px; color:var(--grigio); margin-top:6px; min-height:18px;}
+  button.danger{background:var(--rosso)}
+  .progress{height:14px; background:#e7ebf2; border-radius:7px; overflow:hidden; margin-top:12px;}
+  .progress > div{height:100%; width:0; background:var(--blu); transition:width .1s;}
+  .status{font-size:13px; color:var(--grigio); margin-top:8px; min-height:18px;}
+  .status b{color:var(--testo)}
   .disabled-block{opacity:.5; pointer-events:none;}
   table{width:100%; border-collapse:collapse; margin-top:6px;}
   th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--bordo); vertical-align:top;}
-  th{background:#f0f3f8; font-size:13px;}
+  th{background:#f0f3f8; font-size:13px; position:sticky; top:0;}
   tr.patient{cursor:pointer;}
   tr.patient:hover{background:#f5f8ff;}
   .pill{display:inline-block; background:#e8f0ff; color:var(--blu-scuro); border-radius:20px; padding:1px 9px; font-size:12px; margin:1px 3px 1px 0;}
@@ -56,13 +58,15 @@
   .empty{color:var(--grigio); padding:14px 4px;}
   .toggle-hint{font-size:12px; color:var(--grigio);}
   .badge{font-size:12px; background:#fff4d6; color:var(--warn); border:1px solid #f0dca0; border-radius:6px; padding:1px 7px;}
+  .badge.err{background:#fde8e6; color:var(--rosso); border-color:#f3b6ae;}
   .nowrap{white-space:nowrap;}
+  #resultsBox{max-height:520px; overflow:auto; border:1px solid var(--bordo); border-radius:8px;}
 </style>
 </head>
 <body>
 <header>
   <h1>InnovianSearcher</h1>
-  <p>Ricerca termini nei PDF delle cartelle dei pazienti &mdash; gira tutto nel tuo browser, in locale, senza installare nulla e senza server.</p>
+  <p>Ricerca termini nei PDF delle cartelle dei pazienti &mdash; gira tutto nel tuo browser, in locale, senza installare nulla e senza server. Adatto a migliaia di PDF.</p>
 </header>
 
 <main>
@@ -76,24 +80,16 @@
     <div class="row">
       <div>
         <label>Cartella pazienti <span class="hint">(contiene le cartelle <code>COGNOME_SDO</code>)</span></label>
-        <div class="filebox">
-          <input type="file" id="dir1" webkitdirectory directory multiple />
-        </div>
+        <div class="filebox"><input type="file" id="dir1" webkitdirectory directory multiple /></div>
         <div class="status" id="dir1info"></div>
       </div>
       <div id="dir2block">
         <label>Seconda cartella <span class="hint">(solo diarie infermieristiche)</span></label>
-        <div class="filebox">
-          <input type="file" id="dir2" webkitdirectory directory multiple disabled />
-        </div>
+        <div class="filebox"><input type="file" id="dir2" webkitdirectory directory multiple disabled /></div>
         <div class="status" id="dir2info"></div>
       </div>
     </div>
-    <div style="margin-top:14px;">
-      <button id="loadBtn">Carica indici</button>
-      <div class="progress"><div id="loadBar"></div></div>
-      <div class="status" id="loadStatus">Nessun indice caricato.</div>
-    </div>
+    <div class="status" id="libStatus"></div>
   </section>
 
   <!-- 2) Ricerca -->
@@ -117,10 +113,12 @@
       <div>
         <label>Filtro SDO <span class="hint">(uno per riga o separati da virgola; vuoto = tutti)</span></label>
         <textarea id="sdoFilter" placeholder="12345&#10;67890"></textarea>
+        <div class="hint" style="margin-top:4px;">Con un elenco di SDO la ricerca legge <b>solo</b> quei pazienti: molto più veloce.</div>
       </div>
     </div>
     <div style="margin-top:14px;">
       <button id="searchBtn">Cerca</button>
+      <button class="danger" id="stopBtn" disabled>Ferma</button>
       <button class="secondary" id="exportBtn" disabled>Esporta risultati (CSV)</button>
       <div class="progress"><div id="searchBar"></div></div>
       <div class="status" id="searchStatus"></div>
@@ -129,96 +127,108 @@
 
   <!-- 3) Risultati -->
   <section class="card">
-    <h2><span class="step">3</span> Pazienti positivi</h2>
-    <div id="resultsWrap">
+    <h2><span class="step">3</span> Pazienti positivi <span class="hint" id="resCount"></span></h2>
+    <div id="resultsBox">
       <div class="empty">Nessuna ricerca eseguita.</div>
     </div>
   </section>
 </main>
 
-<!-- Libreria pdf.js (Apache PDFBox per il browser): caricata da CDN, poi resta nella cache del browser -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 (function () {
   "use strict";
 
-  // ---- pdf.js worker ----
-  if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-  }
-
-  // ---- Elementi UI ----
   const $ = (id) => document.getElementById(id);
   const dir1 = $("dir1"), dir2 = $("dir2");
   const dir1info = $("dir1info"), dir2info = $("dir2info"), dir2block = $("dir2block");
-  const loadBtn = $("loadBtn"), loadBar = $("loadBar"), loadStatus = $("loadStatus");
-  const searchCard = $("searchCard"), searchBtn = $("searchBtn"), exportBtn = $("exportBtn");
+  const libStatus = $("libStatus");
+  const searchCard = $("searchCard");
+  const searchBtn = $("searchBtn"), stopBtn = $("stopBtn"), exportBtn = $("exportBtn");
   const searchBar = $("searchBar"), searchStatus = $("searchStatus");
-  const resultsWrap = $("resultsWrap");
+  const resultsBox = $("resultsBox"), resCount = $("resCount");
 
-  let patients = [];        // [{cognome, sdo, folderName, files:[File], words: Map(File->Set)}]
-  let lastResults = [];     // risultati ricerca correnti
+  // Numero di PDF letti contemporaneamente (parallelismo).
+  const CONCURRENCY = 8;
 
-  // ---- Modalita' 1 o 2 cartelle ----
-  function currentMode() {
-    return document.querySelector('input[name="mode"]:checked').value;
+  let patients = [];                 // [{cognome,sdo,folderName,files:[File]}]
+  const wordCache = new Map();       // File -> Set<string> (gia' letti)
+  let lastResults = [];
+  let running = false, aborted = false;
+
+  // ---- pdf.js ----
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    libStatus.innerHTML = "Libreria di lettura PDF pronta.";
+  } else {
+    libStatus.innerHTML = '<span class="badge err">Libreria PDF non caricata</span> ' +
+      "serve il collegamento a Internet al primo avvio: connettiti e ricarica la pagina.";
   }
+
+  // ---- Modalita' 1 / 2 cartelle ----
+  const currentMode = () => document.querySelector('input[name="mode"]:checked').value;
   function refreshMode() {
     const nursing = currentMode() === "nursing";
     dir2.disabled = !nursing;
     dir2block.style.opacity = nursing ? "1" : ".5";
     if (!nursing) { dir2.value = ""; dir2info.textContent = ""; }
+    rebuildPatients();
   }
-  document.querySelectorAll('input[name="mode"]').forEach((r) =>
-    r.addEventListener("change", refreshMode));
-  refreshMode();
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", refreshMode));
 
-  dir1.addEventListener("change", () => showPicked(dir1, dir1info));
-  dir2.addEventListener("change", () => showPicked(dir2, dir2info));
+  dir1.addEventListener("change", () => { showPicked(dir1, dir1info); rebuildPatients(); });
+  dir2.addEventListener("change", () => { showPicked(dir2, dir2info); rebuildPatients(); });
+
+  const isPdf = (f) => /\.pdf$/i.test(f.name);
 
   function showPicked(input, infoEl) {
-    const pdfs = [...input.files].filter(isPdf);
     if (!input.files.length) { infoEl.textContent = ""; return; }
+    const pdfs = [...input.files].filter(isPdf).length;
     const root = (input.files[0].webkitRelativePath || "").split("/")[0] || "(cartella)";
-    infoEl.textContent = `Selezionata "${root}": ${pdfs.length} PDF trovati.`;
+    infoEl.textContent = `Cartella "${root}": ${pdfs} PDF.`;
   }
 
-  function isPdf(f) { return /\.pdf$/i.test(f.name); }
-
-  // ---- Estrazione COGNOME_SDO ----
   function splitName(folderName) {
     const i = folderName.lastIndexOf("_");
-    if (i > 0 && i < folderName.length - 1) {
+    if (i > 0 && i < folderName.length - 1)
       return { cognome: folderName.slice(0, i).trim(), sdo: folderName.slice(i + 1).trim() };
-    }
     return { cognome: "", sdo: folderName.trim() };
   }
 
-  // Raggruppa i file per cartella paziente (primo livello sotto la radice).
-  function groupByPatient(fileLists) {
-    const map = new Map(); // chiave sdo -> patient
-    for (const files of fileLists) {
+  function rebuildPatients() {
+    const lists = [[...dir1.files]];
+    if (currentMode() === "nursing") lists.push([...dir2.files]);
+
+    const map = new Map();
+    let pdfCount = 0;
+    for (const files of lists) {
       for (const f of files) {
         if (!isPdf(f)) continue;
         const parts = (f.webkitRelativePath || f.name).split("/");
-        // struttura attesa: radice / COGNOME_SDO / ... / file.pdf
         const folderName = parts.length >= 3 ? parts[1] : (parts.length === 2 ? parts[0] : "");
         if (!folderName) continue;
         const { cognome, sdo } = splitName(folderName);
         const key = sdo.toLowerCase();
         let p = map.get(key);
-        if (!p) {
-          p = { cognome, sdo, folderName, files: [], words: new Map() };
-          map.set(key, p);
-        }
+        if (!p) { p = { cognome, sdo, folderName, files: [] }; map.set(key, p); }
         p.files.push(f);
+        pdfCount++;
       }
     }
-    const arr = [...map.values()];
-    arr.sort((a, b) => a.folderName.toLowerCase().localeCompare(b.folderName.toLowerCase(), "it"));
-    return arr;
+    patients = [...map.values()].sort((a, b) =>
+      a.folderName.toLowerCase().localeCompare(b.folderName.toLowerCase(), "it"));
+
+    if (patients.length) {
+      searchCard.classList.remove("disabled-block");
+      searchStatus.innerHTML = `Pronto: <b>${patients.length}</b> pazienti, <b>${pdfCount}</b> PDF. ` +
+        "Imposta i termini e premi <b>Cerca</b>.";
+    } else {
+      searchCard.classList.add("disabled-block");
+      searchStatus.textContent = "";
+    }
   }
+  refreshMode();
 
   // ---- Tokenizzazione ----
   const WORD_RE = /[\p{L}\p{N}]+/gu;
@@ -234,7 +244,7 @@
     return m ? m.join("") : "";
   }
 
-  // ---- Distanza di Levenshtein con uscita anticipata ----
+  // ---- Levenshtein con uscita anticipata ----
   function withinDistance(a, b, max) {
     if (a === b) return true;
     const la = a.length, lb = b.length;
@@ -259,127 +269,6 @@
     return prev[lb] <= max;
   }
 
-  // ---- Lettura testo da un PDF ----
-  async function extractWords(file) {
-    const buf = await file.arrayBuffer();
-    const doc = await pdfjsLib.getDocument({ data: buf }).promise;
-    let text = "";
-    for (let p = 1; p <= doc.numPages; p++) {
-      const page = await doc.getPage(p);
-      const content = await page.getTextContent();
-      text += " " + content.items.map((it) => (it.str || "")).join(" ");
-    }
-    await doc.destroy();
-    return tokenize(text);
-  }
-
-  // ---- Caricamento indici ----
-  let loading = false;
-  loadBtn.addEventListener("click", loadIndices);
-
-  async function loadIndices() {
-    if (loading) return;
-    if (!window.pdfjsLib) {
-      loadStatus.innerHTML = '<span class="badge">Libreria PDF non caricata</span> ' +
-        "verifica il collegamento a Internet (serve solo al primo avvio) e ricarica la pagina.";
-      return;
-    }
-    const lists = [[...dir1.files]];
-    if (currentMode() === "nursing") lists.push([...dir2.files]);
-    if (!lists[0].length) {
-      loadStatus.textContent = "Seleziona almeno una cartella.";
-      return;
-    }
-
-    patients = groupByPatient(lists);
-    const total = patients.reduce((s, p) => s + p.files.length, 0);
-    if (total === 0) {
-      loadStatus.textContent = "Nessun PDF trovato nelle cartelle selezionate.";
-      return;
-    }
-
-    loading = true;
-    loadBtn.disabled = true;
-    let done = 0, errors = 0;
-    setBar(loadBar, 0);
-    loadStatus.textContent = `Pazienti: ${patients.length} \u2013 PDF da leggere: ${total}`;
-
-    for (const p of patients) {
-      for (const f of p.files) {
-        try {
-          p.words.set(f, await extractWords(f));
-        } catch (e) {
-          p.words.set(f, new Set());
-          errors++;
-        }
-        done++;
-        if (done % 2 === 0 || done === total) {
-          setBar(loadBar, (done / total) * 100);
-          loadStatus.textContent =
-            `Indicizzazione ${done}/${total} \u2013 ${p.folderName} / ${f.name}`;
-          await sleep(0); // lascia aggiornare l'interfaccia
-        }
-      }
-    }
-
-    setBar(loadBar, 100);
-    loadStatus.innerHTML = `Indice pronto: <b>${patients.length}</b> pazienti, <b>${total}</b> PDF` +
-      (errors ? ` &nbsp;<span class="badge">${errors} PDF non leggibili</span>` : "");
-    searchCard.classList.remove("disabled-block");
-    loading = false;
-    loadBtn.disabled = false;
-  }
-
-  // ---- Ricerca ----
-  searchBtn.addEventListener("click", runSearch);
-
-  async function runSearch() {
-    if (!patients.length) return;
-    const terms = $("terms").value.split(",").map(normalizeTerm).filter(Boolean);
-    if (!terms.length) { searchStatus.textContent = "Inserisci almeno un termine."; return; }
-
-    const logic = document.querySelector('input[name="logic"]:checked').value;
-    const maxTypos = parseInt($("typos").value, 10);
-    const stopFirst = $("stopFirst").checked;
-    const sdoSet = new Set($("sdoFilter").value.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean));
-    const uniqueTermCount = new Set(terms).size;
-
-    searchBtn.disabled = true;
-    setBar(searchBar, 0);
-    lastResults = [];
-
-    const total = patients.length;
-    let idx = 0;
-    for (const p of patients) {
-      idx++;
-      if (sdoSet.size && !sdoSet.has(p.sdo.toLowerCase())) continue;
-
-      const matchedPdfs = [];
-      for (const f of p.files) {
-        const words = p.words.get(f);
-        if (!words || !words.size) continue;
-        const found = matchPdf(words, terms, maxTypos);
-        const positive = logic === "OR" ? found.size > 0 : found.size === uniqueTermCount;
-        if (positive) {
-          matchedPdfs.push({ file: f, terms: [...found] });
-          if (stopFirst) break;
-        }
-      }
-      if (matchedPdfs.length) lastResults.push({ patient: p, matchedPdfs });
-
-      if (idx % 10 === 0 || idx === total) {
-        setBar(searchBar, (idx / total) * 100);
-        await sleep(0);
-      }
-    }
-
-    setBar(searchBar, 100);
-    renderResults(lastResults);
-    searchStatus.textContent = `Trovati ${lastResults.length} pazienti positivi.`;
-    exportBtn.disabled = lastResults.length === 0;
-    searchBtn.disabled = false;
-  }
-
   function matchPdf(words, terms, maxTypos) {
     const found = new Set();
     for (const term of terms) {
@@ -394,58 +283,188 @@
     return found;
   }
 
-  // ---- Render risultati ----
-  function renderResults(results) {
-    if (!results.length) {
-      resultsWrap.innerHTML = '<div class="empty">Nessun paziente positivo per questa ricerca.</div>';
+  // ---- Lettura testo da un PDF (con cache) ----
+  async function getWords(file) {
+    const cached = wordCache.get(file);
+    if (cached) return cached;
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: buf, disableAutoFetch: true, disableStream: true }).promise;
+    let text = "";
+    for (let p = 1; p <= doc.numPages; p++) {
+      const page = await doc.getPage(p);
+      const content = await page.getTextContent();
+      text += " " + content.items.map((it) => it.str || "").join(" ");
+      page.cleanup();
+    }
+    await doc.destroy();
+    const words = tokenize(text);
+    wordCache.set(file, words);
+    return words;
+  }
+
+  // ---- Ricerca (streaming, in parallelo) ----
+  searchBtn.addEventListener("click", runSearch);
+  stopBtn.addEventListener("click", () => { aborted = true; stopBtn.disabled = true; });
+
+  async function runSearch() {
+    if (running || !patients.length) return;
+    if (!window.pdfjsLib) {
+      searchStatus.innerHTML = '<span class="badge err">Libreria PDF non disponibile.</span>';
       return;
     }
+    const terms = $("terms").value.split(",").map(normalizeTerm).filter(Boolean);
+    if (!terms.length) { searchStatus.textContent = "Inserisci almeno un termine."; return; }
+
+    const logic = document.querySelector('input[name="logic"]:checked').value;
+    const maxTypos = parseInt($("typos").value, 10);
+    const stopFirst = $("stopFirst").checked;
+    const sdoSet = new Set($("sdoFilter").value.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean));
+    const uniqueTermCount = new Set(terms).size;
+
+    // Pazienti da esaminare (filtro SDO applicato subito).
+    const targets = sdoSet.size
+      ? patients.filter((p) => sdoSet.has(p.sdo.toLowerCase()))
+      : patients.slice();
+
+    // Coda dei PDF da leggere.
+    const queue = [];
+    for (const p of targets) {
+      p._matched = [];
+      p._remaining = p.files.length;
+      p._done = false;
+      p._finalized = false;
+      for (const f of p.files) queue.push({ p, f });
+    }
+    const total = queue.length;
+
+    if (total === 0) {
+      searchStatus.textContent = sdoSet.size
+        ? "Nessun paziente corrisponde agli SDO indicati." : "Nessun PDF da leggere.";
+      return;
+    }
+
+    // Stato UI
+    running = true; aborted = false;
+    lastResults = [];
+    searchBtn.disabled = true; exportBtn.disabled = true; stopBtn.disabled = false;
+    initResultsTable();
+    let processed = 0, errors = 0, positives = 0;
+    const t0 = performance.now();
+
+    const updateUI = () => {
+      setBar(searchBar, (processed / total) * 100);
+      const secs = ((performance.now() - t0) / 1000);
+      const rate = processed > 0 ? (processed / secs) : 0;
+      const eta = rate > 0 ? Math.max(0, Math.round((total - processed) / rate)) : 0;
+      searchStatus.innerHTML =
+        `Letti <b>${processed}</b>/<b>${total}</b> PDF` +
+        ` &middot; <b>${positives}</b> pazienti positivi` +
+        (errors ? ` &middot; <span class="badge err">${errors} non leggibili</span>` : "") +
+        (processed < total ? ` &middot; ~${eta}s rimanenti` : ` &middot; completato in ${secs.toFixed(1)}s`);
+    };
+
+    const finalize = (p) => {
+      if (p._finalized || !p._matched.length) return;
+      p._finalized = true;
+      positives++;
+      const res = { patient: p, matchedPdfs: p._matched };
+      lastResults.push(res);
+      appendResultRow(res);
+      resCount.textContent = `(${positives})`;
+    };
+
+    let qi = 0;
+    async function poolWorker() {
+      while (qi < queue.length && !aborted) {
+        const { p, f } = queue[qi++];
+        if (p._done) {                 // paziente gia' positivo (stop al primo)
+          p._remaining--;
+          processed++;
+          continue;
+        }
+        let words;
+        try {
+          words = await getWords(f);
+        } catch (e) {
+          words = new Set(); errors++;
+        }
+        processed++;
+        p._remaining--;
+
+        const found = matchPdf(words, terms, maxTypos);
+        const positive = logic === "OR" ? found.size > 0 : found.size === uniqueTermCount;
+        if (positive) {
+          p._matched.push({ file: f, terms: [...found] });
+          if (stopFirst) { p._done = true; finalize(p); }
+        }
+        if (!p._done && p._remaining === 0) finalize(p);
+
+        if (processed % 5 === 0 || processed === total) { updateUI(); await sleep(0); }
+      }
+    }
+
+    updateUI();
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, poolWorker));
+
+    // Finalizza eventuali pazienti rimasti (caso "leggi tutti" interrotto a meta').
+    for (const p of targets) if (!p._done && p._remaining === 0) finalize(p);
+
+    setBar(searchBar, 100);
+    updateUI();
+    if (aborted) searchStatus.innerHTML += ' &middot; <span class="badge">interrotto</span>';
+    if (!lastResults.length) resultsBox.innerHTML = '<div class="empty">Nessun paziente positivo per questa ricerca.</div>';
+
+    running = false;
+    searchBtn.disabled = false; stopBtn.disabled = true;
+    exportBtn.disabled = lastResults.length === 0;
+  }
+
+  // ---- Tabella risultati (popolata in tempo reale) ----
+  let tbodyEl = null;
+  function initResultsTable() {
+    resCount.textContent = "(0)";
+    resultsBox.innerHTML = "";
     const table = document.createElement("table");
     table.innerHTML =
       "<thead><tr><th>Cognome</th><th>SDO</th><th class='nowrap'>PDF positivi</th><th>Termini trovati</th></tr></thead>";
-    const tbody = document.createElement("tbody");
+    tbodyEl = document.createElement("tbody");
+    table.appendChild(tbodyEl);
+    resultsBox.appendChild(table);
+  }
 
-    results.forEach((res, i) => {
-      const tr = document.createElement("tr");
-      tr.className = "patient";
-      tr.innerHTML =
-        `<td>${esc(res.patient.cognome) || "<i>(senza cognome)</i>"}</td>` +
-        `<td>${esc(res.patient.sdo)}</td>` +
-        `<td style="text-align:center">${res.matchedPdfs.length}</td>` +
-        `<td>${[...new Set(res.matchedPdfs.flatMap((m) => m.terms))].map((t) => `<span class="pill">${esc(t)}</span>`).join("")}</td>`;
-      const detail = document.createElement("tr");
-      detail.className = "pdflist";
-      detail.style.display = "none";
-      const td = document.createElement("td");
-      td.colSpan = 4;
-      td.innerHTML =
-        `<div><b>Cartella:</b> ${esc(res.patient.folderName)}</div>` +
-        "<div style='margin-top:6px'><b>PDF (giornate) positive &ndash; clicca per aprire:</b></div>" +
-        "<ul style='margin:6px 0 0 18px'>" +
-        res.matchedPdfs.map((m) =>
-          `<li><a data-open="1">${esc(m.file.name)}</a> ` +
-          `<span class="hint">[${m.terms.map(esc).join(", ")}]</span></li>`).join("") +
-        "</ul>";
-      detail.appendChild(td);
+  function appendResultRow(res) {
+    const tr = document.createElement("tr");
+    tr.className = "patient";
+    const termini = [...new Set(res.matchedPdfs.flatMap((m) => m.terms))];
+    tr.innerHTML =
+      `<td>${esc(res.patient.cognome) || "<i>(senza cognome)</i>"}</td>` +
+      `<td>${esc(res.patient.sdo)}</td>` +
+      `<td style="text-align:center">${res.matchedPdfs.length}</td>` +
+      `<td>${termini.map((t) => `<span class="pill">${esc(t)}</span>`).join("")}</td>`;
 
-      tr.addEventListener("click", () => {
-        detail.style.display = detail.style.display === "none" ? "" : "none";
-      });
-      // apertura dei PDF
-      td.querySelectorAll('a[data-open]').forEach((a, k) => {
-        a.addEventListener("click", (ev) => {
-          ev.stopPropagation();
-          openFile(res.matchedPdfs[k].file);
-        });
-      });
+    const detail = document.createElement("tr");
+    detail.className = "pdflist";
+    detail.style.display = "none";
+    const td = document.createElement("td");
+    td.colSpan = 4;
+    td.innerHTML =
+      `<div><b>Cartella:</b> ${esc(res.patient.folderName)}</div>` +
+      "<div style='margin-top:6px'><b>PDF (giornate) positive &ndash; clicca per aprire:</b></div>" +
+      "<ul style='margin:6px 0 0 18px'>" +
+      res.matchedPdfs.map((m) =>
+        `<li><a data-open="1">${esc(m.file.name)}</a> <span class="hint">[${m.terms.map(esc).join(", ")}]</span></li>`).join("") +
+      "</ul>";
+    detail.appendChild(td);
 
-      tbody.appendChild(tr);
-      tbody.appendChild(detail);
+    tr.addEventListener("click", () => {
+      detail.style.display = detail.style.display === "none" ? "" : "none";
+    });
+    td.querySelectorAll('a[data-open]').forEach((a, k) => {
+      a.addEventListener("click", (ev) => { ev.stopPropagation(); openFile(res.matchedPdfs[k].file); });
     });
 
-    table.appendChild(tbody);
-    resultsWrap.innerHTML = "";
-    resultsWrap.appendChild(table);
+    tbodyEl.appendChild(tr);
+    tbodyEl.appendChild(detail);
   }
 
   function openFile(file) {
@@ -461,10 +480,8 @@
     for (const r of lastResults) {
       const termini = [...new Set(r.matchedPdfs.flatMap((m) => m.terms))].join(" ");
       const files = r.matchedPdfs.map((m) => m.file.name).join(" | ");
-      rows.push([
-        csv(r.patient.cognome), csv(r.patient.sdo), r.matchedPdfs.length,
-        csv(termini), csv(r.patient.folderName), csv(files)
-      ].join(";"));
+      rows.push([csv(r.patient.cognome), csv(r.patient.sdo), r.matchedPdfs.length,
+        csv(termini), csv(r.patient.folderName), csv(files)].join(";"));
     }
     const blob = new Blob(["\uFEFF" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
@@ -478,12 +495,9 @@
   function setBar(el, pct) { el.style.width = Math.max(0, Math.min(100, pct)) + "%"; }
   function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   function esc(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
-  function csv(s) {
-    return String(s == null ? "" : s).replace(/;/g, ",").replace(/[\r\n]+/g, " ");
-  }
+  function csv(s) { return String(s == null ? "" : s).replace(/;/g, ",").replace(/[\r\n]+/g, " "); }
 })();
 </script>
 </body>

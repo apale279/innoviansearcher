@@ -23,9 +23,7 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
      (2 cartelle)*.
    - Premi sul selettore e scegli la **cartella che contiene le cartelle dei
      pazienti** (`COGNOME_SDO`). Il browser chiederà conferma a leggere la
-     cartella: accetta.
-   - Premi **"Carica indici"**: una **barra di avanzamento** mostra la lettura
-     dei PDF. (Si fa una volta sola; poi le ricerche sono immediate.)
+     cartella: accetta. Comparirà subito il numero di pazienti e di PDF trovati.
 3. **Passo 2 – Imposta la ricerca**
    - Scrivi i **termini** separati da virgola (es. `febbre, tosse`).
    - Scegli **OR** (almeno un termine) o **AND** (tutti i termini nello stesso
@@ -35,14 +33,30 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
    - Spunta o togli **"Fermati al primo PDF positivo per paziente"**.
    - (Facoltativo) incolla un elenco di **SDO** per limitare la ricerca a quei
      pazienti; lascia vuoto per cercarli tutti.
-   - Premi **"Cerca"**.
+   - Premi **"Cerca"**. I PDF vengono letti **mentre** cerca: la barra mostra
+     l'avanzamento (PDF letti, pazienti positivi, tempo stimato) e i risultati
+     **compaiono man mano**. Con il pulsante **"Ferma"** puoi interrompere quando
+     vuoi.
 4. **Passo 3 – Pazienti positivi**
-   - Compare la tabella con Cognome, SDO, numero di PDF positivi e termini
-     trovati.
+   - La tabella si riempie in tempo reale con Cognome, SDO, numero di PDF
+     positivi e termini trovati.
    - **Clicca su una riga** per vedere il nome della cartella e l'elenco dei PDF
      (giornate) positivi; **clicca sul nome di un PDF per aprirlo** in una nuova
      scheda.
    - Con **"Esporta risultati (CSV)"** salvi l'elenco (apribile in Excel).
+
+### Consigli con tante cartelle (es. 4000 PDF)
+
+- La ricerca **non blocca** più il browser: legge i PDF in parallelo e mostra i
+  risultati mentre procede.
+- Se conosci gli **SDO** da controllare, incollali nel filtro: l'app legge
+  **solo** quei pazienti ed è enormemente più veloce.
+- Lasciando attivo **"Fermati al primo PDF positivo"**, appena un paziente
+  risulta positivo l'app salta i suoi PDF restanti.
+- Dopo la prima lettura i PDF restano **in cache** per la sessione: cambiare i
+  termini e rifare la ricerca è quasi immediato.
+- La primissima ricerca su molte migliaia di PDF richiede comunque qualche
+  minuto (è il tempo di leggere tutti i file): l'avanzamento è sempre visibile.
 
 ---
 
