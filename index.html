@@ -28,7 +28,7 @@
   input[type=text], textarea{
     width:100%; padding:9px 11px; border:1px solid var(--bordo); border-radius:8px; font:inherit; background:#fff;
   }
-  textarea{resize:vertical; min-height:70px;}
+  textarea{resize:vertical; min-height:90px;}
   .controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center; margin-top:6px;}
   .controls label{display:inline-flex; align-items:center; gap:6px; font-weight:500; margin:0;}
   button{
@@ -58,21 +58,27 @@
   .toggle-hint{font-size:12px; color:var(--grigio);}
   .badge{font-size:12px; background:#fff4d6; color:var(--warn); border:1px solid #f0dca0; border-radius:6px; padding:1px 7px;}
   .badge.err{background:#fde8e6; color:var(--rosso); border-color:#f3b6ae;}
+  .badge.ok{background:#e3f5e8; color:var(--ok); border-color:#abdcb9;}
   .nowrap{white-space:nowrap;}
   #resultsBox{max-height:520px; overflow:auto; border:1px solid var(--bordo); border-radius:8px;}
   .pickline{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .reconcile{display:flex; gap:18px; flex-wrap:wrap; margin-top:10px;}
+  .reconcile > div{flex:1; min-width:220px; border:1px solid var(--bordo); border-radius:8px; padding:10px 12px; background:#fafbfd;}
+  .reconcile h3{margin:0 0 6px; font-size:14px;}
+  .codelist{max-height:170px; overflow:auto; font-family:ui-monospace,Consolas,monospace; font-size:13px; white-space:pre-wrap;}
+  .dataprima{font-weight:700; color:var(--blu-scuro);}
 </style>
 </head>
 <body>
 <header>
   <h1>InnovianSearcher</h1>
-  <p>Ricerca termini nei PDF delle cartelle dei pazienti &mdash; gira tutto nel tuo browser, in locale, senza installare nulla e senza server. Adatto a migliaia di cartelle, anche su disco di rete.</p>
+  <p>Verifica un elenco di SDO e cerca nei PDF delle cartelle dei pazienti &mdash; tutto nel browser, in locale, senza installare nulla e senza server.</p>
 </header>
 
 <main>
-  <!-- 1) Cartelle -->
+  <!-- 1) Cartella + elenco SDO -->
   <section class="card">
-    <h2><span class="step">1</span> Scegli le cartelle</h2>
+    <h2><span class="step">1</span> Cartella ed elenco SDO</h2>
     <div class="controls" style="margin-bottom:14px;">
       <label><input type="radio" name="mode" value="medical" checked /> Diarie mediche (1 cartella)</label>
       <label><input type="radio" name="mode" value="nursing" /> Diarie infermieristiche (2 cartelle)</label>
@@ -85,26 +91,36 @@
           <span class="status" id="dir1info" style="margin:0;"></span>
         </div>
         <input type="file" id="dir1" webkitdirectory directory multiple style="display:none" />
-      </div>
-      <div id="dir2block">
-        <label>Seconda cartella <span class="hint">(solo diarie infermieristiche)</span></label>
-        <div class="pickline">
-          <button class="secondary" id="pick2" type="button" disabled>Scegli cartella&hellip;</button>
-          <span class="status" id="dir2info" style="margin:0;"></span>
+
+        <div id="dir2block" style="margin-top:12px;">
+          <label>Seconda cartella <span class="hint">(solo diarie infermieristiche)</span></label>
+          <div class="pickline">
+            <button class="secondary" id="pick2" type="button" disabled>Scegli cartella&hellip;</button>
+            <span class="status" id="dir2info" style="margin:0;"></span>
+          </div>
+          <input type="file" id="dir2" webkitdirectory directory multiple style="display:none" />
         </div>
-        <input type="file" id="dir2" webkitdirectory directory multiple style="display:none" />
+      </div>
+      <div>
+        <label>Il tuo elenco di SDO <span class="hint">(uno per riga o separati da virgola)</span></label>
+        <textarea id="sdoFilter" placeholder="2118001262&#10;2123015297&#10;2124016976"></textarea>
+        <div style="margin-top:10px;">
+          <button id="verifyBtn" disabled>Verifica elenco SDO</button>
+          <button class="secondary" id="verifyExportBtn" disabled>Esporta elenco (CSV)</button>
+        </div>
       </div>
     </div>
     <div class="status" id="libStatus"></div>
+    <div id="reconcileBox"></div>
   </section>
 
-  <!-- 2) Ricerca -->
+  <!-- 2) Ricerca farmaco -->
   <section class="card disabled-block" id="searchCard">
-    <h2><span class="step">2</span> Imposta la ricerca</h2>
+    <h2><span class="step">2</span> Ricerca del farmaco</h2>
     <div class="row">
       <div style="flex:2;">
-        <label>Termini da cercare <span class="hint">(separati da virgola, es. <code>febbre, tosse</code>)</span></label>
-        <input type="text" id="terms" placeholder="febbre, tosse, antibiotico" />
+        <label>Termini da cercare <span class="hint">(separati da virgola; per la richiesta: <code>perampanel</code>)</span></label>
+        <input type="text" id="terms" value="perampanel" placeholder="perampanel" />
         <div class="controls">
           <label><input type="radio" name="logic" value="OR" checked /> OR <span class="toggle-hint">(almeno un termine)</span></label>
           <label><input type="radio" name="logic" value="AND" /> AND <span class="toggle-hint">(tutti i termini nello stesso PDF)</span></label>
@@ -115,11 +131,12 @@
           </label>
           <label><input type="checkbox" id="stopFirst" checked /> Fermati al primo PDF positivo per paziente</label>
         </div>
-      </div>
-      <div>
-        <label>Filtro SDO <span class="hint">(uno per riga o separati da virgola; vuoto = tutti)</span></label>
-        <textarea id="sdoFilter" placeholder="2118001262&#10;2123015297"></textarea>
-        <div class="hint" style="margin-top:4px;">Con un elenco di SDO la ricerca apre e legge <b>solo</b> quelle cartelle: molto più veloce sui dischi di rete.</div>
+        <div class="hint" style="margin-top:8px;">
+          La ricerca viene eseguita sui pazienti del tuo elenco trovati al passo 1
+          (se l'elenco è vuoto, cerca in tutti i pazienti della cartella).
+          La <b>prima data di assunzione</b> è il giorno <b>precedente</b> alla creazione del PDF positivo più vecchio
+          (il PDF viene generato alle 7 del mattino del giorno dopo).
+        </div>
       </div>
     </div>
     <div style="margin-top:14px;">
@@ -150,18 +167,23 @@
   const pick1 = $("pick1"), pick2 = $("pick2");
   const dir1info = $("dir1info"), dir2info = $("dir2info"), dir2block = $("dir2block");
   const libStatus = $("libStatus");
+  const sdoFilter = $("sdoFilter"), verifyBtn = $("verifyBtn"), verifyExportBtn = $("verifyExportBtn");
+  const reconcileBox = $("reconcileBox");
   const searchCard = $("searchCard");
   const searchBtn = $("searchBtn"), stopBtn = $("stopBtn"), exportBtn = $("exportBtn");
   const searchBar = $("searchBar"), searchStatus = $("searchStatus");
   const resultsBox = $("resultsBox"), resCount = $("resCount");
 
-  const CONCURRENCY = 8;          // PDF/cartelle lette in parallelo
+  const CONCURRENCY = 8;
   const hasFS = typeof window.showDirectoryPicker === "function";
+  const DAY_MS = 24 * 60 * 60 * 1000;
 
-  let source1 = null, source2 = null;   // {type:'fs',root} oppure {type:'input',files:[]}
-  let patients = [];                     // [{cognome,sdo,folderName,inputEntries,dirHandles,_entries}]
+  let source1 = null, source2 = null;
+  let patients = [];
+  let patientsBySdo = new Map();         // sdo(lowercase) -> patient
   const wordCache = new Map();           // entry -> Set<string>
   let lastResults = [];
+  let lastReconcile = null;              // {found:[{sdo,cognome}], notFound:[sdo]}
   let running = false, aborted = false;
 
   // ---- pdf.js ----
@@ -186,7 +208,7 @@
   }
   document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", refreshMode));
 
-  // ---- Selezione cartella (FS Access API con fallback su input) ----
+  // ---- Selezione cartella ----
   pick1.addEventListener("click", () => pick(1));
   pick2.addEventListener("click", () => pick(2));
   dir1.addEventListener("change", () => onInputPicked(1));
@@ -201,8 +223,7 @@
         await rebuildPatients();
         return;
       } catch (e) {
-        if (e && e.name === "AbortError") return;     // l'utente ha annullato
-        // qualsiasi altro errore: ripiego sul metodo classico
+        if (e && e.name === "AbortError") return;
       }
     }
     (which === 1 ? dir1 : dir2).click();
@@ -213,14 +234,14 @@
     const infoEl = which === 1 ? dir1info : dir2info;
     if (!input.files.length) return;
     const root = (input.files[0].webkitRelativePath || "").split("/")[0] || "(cartella)";
-    const pdfs = [...input.files].filter(isPdf).length;
+    const pdfs = [...input.files].filter((f) => isPdf(f.name)).length;
     infoEl.textContent = `Cartella "${root}": ${pdfs} PDF.`;
     setSource(which, { type: "input", files: [...input.files] });
     await rebuildPatients();
   }
 
   function setSource(which, src) { if (which === 1) source1 = src; else source2 = src; }
-  const isPdf = (name) => /\.pdf$/i.test(typeof name === "string" ? name : name.name);
+  const isPdf = (name) => /\.pdf$/i.test(name);
 
   function splitName(folderName) {
     const i = folderName.lastIndexOf("_");
@@ -254,19 +275,23 @@
       }
       return pdfCount;
     }
-    // FS: elenco solo dei nomi cartella (veloce, niente lettura file)
     for await (const handle of src.root.values()) {
       if (handle.kind !== "directory") continue;
       const p = getPatient(map, handle.name);
       p.dirHandles.push(handle);
     }
-    return -1; // numero PDF non noto finche' non si cerca
+    return -1;
   }
 
   async function rebuildPatients() {
     const srcs = [source1];
     if (currentMode() === "nursing") srcs.push(source2);
-    if (!srcs.some(Boolean)) { patients = []; searchCard.classList.add("disabled-block"); searchStatus.textContent = ""; return; }
+    if (!srcs.some(Boolean)) {
+      patients = []; patientsBySdo = new Map();
+      searchCard.classList.add("disabled-block");
+      verifyBtn.disabled = true; verifyExportBtn.disabled = true;
+      searchStatus.textContent = ""; return;
+    }
 
     searchStatus.textContent = "Lettura elenco cartelle\u2026";
     const map = new Map();
@@ -281,39 +306,103 @@
       return;
     }
 
+    patientsBySdo = map;
     patients = [...map.values()].sort((a, b) =>
       a.folderName.toLowerCase().localeCompare(b.folderName.toLowerCase(), "it"));
 
     if (patients.length) {
       searchCard.classList.remove("disabled-block");
+      verifyBtn.disabled = false;
       searchStatus.innerHTML = `Pronto: <b>${patients.length}</b> pazienti` +
-        (anyFs ? " (i PDF verranno contati durante la ricerca)." : `, <b>${pdfCount}</b> PDF.`) +
-        " Imposta i termini e premi <b>Cerca</b>.";
+        (anyFs ? "." : `, <b>${pdfCount}</b> PDF.`);
     } else {
       searchCard.classList.add("disabled-block");
+      verifyBtn.disabled = true;
       searchStatus.textContent = "Nessuna cartella paziente trovata. Verifica di aver scelto la cartella che contiene le sottocartelle COGNOME_SDO.";
     }
   }
 
-  // ---- Elenco PDF di un paziente (lazy + cache) ----
+  // ---- STEP 1: riconciliazione elenco SDO ----
+  function parseSdoList() {
+    const seen = new Set(), out = [];
+    for (const raw of sdoFilter.value.split(/[\s,;]+/)) {
+      const s = raw.trim();
+      if (!s) continue;
+      const k = s.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k); out.push(s);
+    }
+    return out;
+  }
+
+  verifyBtn.addEventListener("click", () => {
+    if (!patients.length) return;
+    const list = parseSdoList();
+    if (!list.length) {
+      reconcileBox.innerHTML = '<div class="status">Inserisci il tuo elenco di SDO nel riquadro qui sopra.</div>';
+      verifyExportBtn.disabled = true; lastReconcile = null;
+      return;
+    }
+    const found = [], notFound = [];
+    for (const sdo of list) {
+      const p = patientsBySdo.get(sdo.toLowerCase());
+      if (p) found.push({ sdo, cognome: p.cognome });
+      else notFound.push(sdo);
+    }
+    lastReconcile = { found, notFound, total: list.length };
+    verifyExportBtn.disabled = false;
+
+    reconcileBox.innerHTML =
+      `<div class="status"><b>${found.length}</b> SDO trovati su <b>${list.length}</b>` +
+      (notFound.length ? ` &middot; <span class="badge err">${notFound.length} non trovati</span>` : ' &middot; <span class="badge ok">tutti trovati</span>') +
+      `</div>
+      <div class="reconcile">
+        <div>
+          <h3>Trovati (${found.length})</h3>
+          <div class="codelist">${found.length
+            ? found.map((f) => `${esc(f.sdo)}  ${esc(f.cognome) || "(senza cognome)"}`).join("\n")
+            : "(nessuno)"}</div>
+        </div>
+        <div>
+          <h3>Non trovati (${notFound.length})</h3>
+          <div class="codelist">${notFound.length ? notFound.map(esc).join("\n") : "(nessuno)"}</div>
+        </div>
+      </div>`;
+  });
+
+  verifyExportBtn.addEventListener("click", () => {
+    if (!lastReconcile) return;
+    const rows = ["SDO;Stato;Cognome"];
+    for (const f of lastReconcile.found) rows.push([csv(f.sdo), "TROVATO", csv(f.cognome)].join(";"));
+    for (const s of lastReconcile.notFound) rows.push([csv(s), "NON TROVATO", ""].join(";"));
+    downloadCsv(rows, "elenco_sdo.csv");
+  });
+
+  // ---- Elenco PDF di un paziente (lazy + data file) ----
   async function listEntries(p) {
     if (p._entries) return p._entries;
-    const out = [];
-    if (p.inputEntries) for (const e of p.inputEntries) out.push(e);
+    const raw = [];
+    if (p.inputEntries) for (const e of p.inputEntries) raw.push(e);
     for (const dh of p.dirHandles) {
       for await (const h of dh.values()) {
         if (h.kind === "file" && isPdf(h.name)) {
           const handle = h;
-          out.push({ name: h.name, getFile: () => handle.getFile() });
+          raw.push({ name: h.name, getFile: () => handle.getFile() });
         }
       }
     }
-    out.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase(), "it"));
-    p._entries = out;
-    return out;
+    // Recupera la data di ogni PDF (serve per la "prima data di assunzione").
+    for (const e of raw) {
+      try { const f = await e.getFile(); e._file = f; e.lastModified = f.lastModified || 0; }
+      catch (_) { e.lastModified = 0; }
+    }
+    // Ordina per data crescente: cosi' la prima positivita' e' la piu' vecchia.
+    raw.sort((a, b) => (a.lastModified - b.lastModified) || a.name.toLowerCase().localeCompare(b.name.toLowerCase(), "it"));
+    p._entries = raw;
+    return raw;
   }
 
-  // ---- Tokenizzazione ----
+  // ---- Tokenizzazione / Levenshtein / match ----
   const WORD_RE = /[\p{L}\p{N}]+/gu;
   function tokenize(text) {
     const set = new Set();
@@ -326,8 +415,6 @@
     const m = (t || "").toLowerCase().match(WORD_RE);
     return m ? m.join("") : "";
   }
-
-  // ---- Levenshtein con uscita anticipata ----
   function withinDistance(a, b, max) {
     if (a === b) return true;
     const la = a.length, lb = b.length;
@@ -351,7 +438,6 @@
     }
     return prev[lb] <= max;
   }
-
   function matchPdf(words, terms, maxTypos) {
     const found = new Set();
     for (const term of terms) {
@@ -366,11 +452,10 @@
     return found;
   }
 
-  // ---- Lettura testo da un PDF (con cache) ----
   async function getWords(entry) {
     const cached = wordCache.get(entry);
     if (cached) return cached;
-    const file = await entry.getFile();
+    const file = entry._file || await entry.getFile();
     const buf = await file.arrayBuffer();
     const doc = await pdfjsLib.getDocument({ data: buf, disableAutoFetch: true, disableStream: true }).promise;
     let text = "";
@@ -386,7 +471,17 @@
     return words;
   }
 
-  // ---- Ricerca ----
+  // ---- Date ----
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function fmtDate(ts) {
+    if (!ts) return "\u2014";
+    const d = new Date(ts);
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  }
+  // Giorno PRIMA della creazione del PDF (PDF generato alle 7 del giorno dopo).
+  function assumptionTs(ts) { return ts ? ts - DAY_MS : 0; }
+
+  // ---- STEP 2: ricerca ----
   searchBtn.addEventListener("click", runSearch);
   stopBtn.addEventListener("click", () => { aborted = true; stopBtn.disabled = true; });
 
@@ -400,7 +495,7 @@
     const logic = document.querySelector('input[name="logic"]:checked').value;
     const maxTypos = parseInt($("typos").value, 10);
     const stopFirst = $("stopFirst").checked;
-    const sdoSet = new Set($("sdoFilter").value.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean));
+    const sdoSet = new Set(parseSdoList().map((s) => s.toLowerCase()));
     const uniqueTermCount = new Set(terms).size;
 
     const targets = sdoSet.size ? patients.filter((p) => sdoSet.has(p.sdo.toLowerCase())) : patients.slice();
@@ -416,7 +511,7 @@
       finishUI(); return;
     }
 
-    // Fase A: elenco dei PDF (apre solo le cartelle bersaglio).
+    // Fase A: elenco PDF + date (apre solo le cartelle bersaglio).
     searchStatus.textContent = "Preparazione elenco file\u2026";
     const queue = [];
     let prepDone = 0, pi = 0;
@@ -440,10 +535,9 @@
     const total = queue.length;
     if (total === 0) { searchStatus.textContent = "Nessun PDF trovato nelle cartelle selezionate."; finishUI(); return; }
 
-    // Fase B: lettura + ricerca in parallelo, risultati in tempo reale.
+    // Fase B: lettura + ricerca in parallelo.
     let processed = 0, errors = 0, positives = 0;
     const t0 = performance.now();
-
     const updateUI = () => {
       setBar(searchBar, (processed / total) * 100);
       const secs = (performance.now() - t0) / 1000;
@@ -454,11 +548,13 @@
         (errors ? ` &middot; <span class="badge err">${errors} non leggibili</span>` : "") +
         (processed < total ? ` &middot; ~${eta}s rimanenti` : ` &middot; completato in ${secs.toFixed(1)}s`);
     };
-
     const finalize = (p) => {
       if (p._finalized || !p._matched.length) return;
       p._finalized = true; positives++;
-      const res = { patient: p, matchedPdfs: p._matched };
+      // PDF positivo piu' vecchio -> prima data di assunzione.
+      const matched = p._matched.slice().sort((a, b) => a.entry.lastModified - b.entry.lastModified);
+      const firstTs = matched[0].entry.lastModified;
+      const res = { patient: p, matchedPdfs: matched, firstPdfTs: firstTs, assumptionTs: assumptionTs(firstTs) };
       lastResults.push(res); appendResultRow(res); resCount.textContent = `(${positives})`;
     };
 
@@ -498,13 +594,13 @@
     exportBtn.disabled = lastResults.length === 0;
   }
 
-  // ---- Tabella risultati (in tempo reale) ----
+  // ---- Tabella risultati ----
   let tbodyEl = null;
   function initResultsTable() {
     resCount.textContent = "(0)";
     resultsBox.innerHTML = "";
     const table = document.createElement("table");
-    table.innerHTML = "<thead><tr><th>Cognome</th><th>SDO</th><th class='nowrap'>PDF positivi</th><th>Termini trovati</th></tr></thead>";
+    table.innerHTML = "<thead><tr><th>Cognome</th><th>SDO</th><th class='nowrap'>Prima assunzione</th><th class='nowrap'>PDF positivi</th><th>Termini trovati</th></tr></thead>";
     tbodyEl = document.createElement("tbody");
     table.appendChild(tbodyEl);
     resultsBox.appendChild(table);
@@ -517,6 +613,7 @@
     tr.innerHTML =
       `<td>${esc(res.patient.cognome) || "<i>(senza cognome)</i>"}</td>` +
       `<td>${esc(res.patient.sdo)}</td>` +
+      `<td class="dataprima nowrap">${fmtDate(res.assumptionTs)}</td>` +
       `<td style="text-align:center">${res.matchedPdfs.length}</td>` +
       `<td>${termini.map((t) => `<span class="pill">${esc(t)}</span>`).join("")}</td>`;
 
@@ -524,13 +621,17 @@
     detail.className = "pdflist";
     detail.style.display = "none";
     const td = document.createElement("td");
-    td.colSpan = 4;
+    td.colSpan = 5;
     td.innerHTML =
       `<div><b>Cartella:</b> ${esc(res.patient.folderName)}</div>` +
+      `<div style='margin-top:6px'><b>Prima data di assunzione:</b> <span class="dataprima">${fmtDate(res.assumptionTs)}</span> ` +
+      `<span class="hint">(PDF creato il ${fmtDate(res.firstPdfTs)})</span></div>` +
       "<div style='margin-top:6px'><b>PDF (giornate) positive &ndash; clicca per aprire:</b></div>" +
       "<ul style='margin:6px 0 0 18px'>" +
       res.matchedPdfs.map((m) =>
-        `<li><a data-open="1">${esc(m.entry.name)}</a> <span class="hint">[${m.terms.map(esc).join(", ")}]</span></li>`).join("") +
+        `<li><a data-open="1">${esc(m.entry.name)}</a> ` +
+        `<span class="hint">&middot; assunzione ${fmtDate(assumptionTs(m.entry.lastModified))} ` +
+        `(PDF ${fmtDate(m.entry.lastModified)}) &middot; [${m.terms.map(esc).join(", ")}]</span></li>`).join("") +
       "</ul>";
     detail.appendChild(td);
 
@@ -545,7 +646,7 @@
 
   async function openEntry(entry) {
     try {
-      const file = await entry.getFile();
+      const file = entry._file || await entry.getFile();
       const url = URL.createObjectURL(file);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -554,25 +655,28 @@
     }
   }
 
-  // ---- Esportazione CSV ----
+  // ---- Esportazione risultati ----
   exportBtn.addEventListener("click", () => {
     if (!lastResults.length) return;
-    const rows = ["Cognome;SDO;PDF positivi;Termini trovati;Cartella;File positivi"];
+    const rows = ["Cognome;SDO;Prima assunzione;PDF positivi;Termini trovati;Cartella;File positivi"];
     for (const r of lastResults) {
       const termini = [...new Set(r.matchedPdfs.flatMap((m) => m.terms))].join(" ");
-      const files = r.matchedPdfs.map((m) => m.entry.name).join(" | ");
-      rows.push([csv(r.patient.cognome), csv(r.patient.sdo), r.matchedPdfs.length,
-        csv(termini), csv(r.patient.folderName), csv(files)].join(";"));
+      const files = r.matchedPdfs.map((m) => `${m.entry.name} (${fmtDate(m.entry.lastModified)})`).join(" | ");
+      rows.push([csv(r.patient.cognome), csv(r.patient.sdo), fmtDate(r.assumptionTs),
+        r.matchedPdfs.length, csv(termini), csv(r.patient.folderName), csv(files)].join(";"));
     }
-    const blob = new Blob(["\uFEFF" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "risultati_ricerca.csv";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    downloadCsv(rows, "risultati_ricerca.csv");
   });
 
   // ---- Utilita' ----
+  function downloadCsv(rows, name) {
+    const blob = new Blob(["\uFEFF" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
   function setBar(el, pct) { el.style.width = Math.max(0, Math.min(100, pct)) + "%"; }
   function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   function esc(s) {

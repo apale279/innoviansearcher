@@ -17,36 +17,34 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
 ## Come si usa (niente da installare)
 
 1. Apri il file **`index.html`** con un doppio clic (si apre nel browser).
-   Va bene **Chrome**, **Edge** o **Firefox** aggiornati.
-2. **Passo 1 – Scegli le cartelle**
+   Consigliati **Chrome** o **Edge** (con dischi di rete e migliaia di cartelle).
+2. **Passo 1 – Cartella ed elenco SDO**
    - Seleziona *Diarie mediche (1 cartella)* oppure *Diarie infermieristiche
      (2 cartelle)*.
    - Premi **"Scegli cartella…"** e seleziona la **cartella che contiene le
      cartelle dei pazienti** (`COGNOME_SDO`) — ad esempio la cartella `Daily`,
-     anche se si trova su un **disco di rete**. Il browser chiederà conferma a
-     leggere la cartella: accetta. Comparirà subito il numero di pazienti.
-   - Con **Chrome** o **Edge** l'app apre le cartelle solo quando serve: ideale
-     per migliaia di cartelle su rete. Con altri browser (es. Firefox) usa una
-     modalità compatibile che funziona comunque.
-3. **Passo 2 – Imposta la ricerca**
-   - Scrivi i **termini** separati da virgola (es. `febbre, tosse`).
-   - Scegli **OR** (almeno un termine) o **AND** (tutti i termini nello stesso
-     PDF). Le **maiuscole/minuscole sono sempre ignorate**.
-   - Imposta gli **errori di battitura tollerati** (0, 1 o 2): tiene conto dei
-     refusi (es. *febre* trova *febbre*).
-   - Spunta o togli **"Fermati al primo PDF positivo per paziente"**.
-   - (Facoltativo) incolla un elenco di **SDO** per limitare la ricerca a quei
-     pazienti; lascia vuoto per cercarli tutti.
-   - Premi **"Cerca"**. I PDF vengono letti **mentre** cerca: la barra mostra
-     l'avanzamento (PDF letti, pazienti positivi, tempo stimato) e i risultati
-     **compaiono man mano**. Con il pulsante **"Ferma"** puoi interrompere quando
-     vuoi.
+     anche su **disco di rete**. Accetta la richiesta di lettura del browser.
+   - Incolla **il tuo elenco di SDO** (uno per riga o separati da virgola) e premi
+     **"Verifica elenco SDO"**: l'app mostra **quali SDO sono stati trovati**
+     (con cognome) e **quali no**. Con **"Esporta elenco (CSV)"** salvi questo
+     riepilogo.
+3. **Passo 2 – Ricerca del farmaco (perampanel)**
+   - Il termine è già impostato su **`perampanel`** (puoi cambiarlo o aggiungerne
+     altri separati da virgola).
+   - Scegli **OR**/**AND**, gli **errori di battitura tollerati** (0–2) e se
+     **fermarti al primo PDF positivo**. Maiuscole/minuscole sempre ignorate.
+   - La ricerca viene fatta **sui pazienti del tuo elenco trovati al passo 1**
+     (se l'elenco è vuoto, cerca in tutti). Premi **"Cerca"**: i risultati
+     compaiono in tempo reale; con **"Ferma"** puoi interrompere.
 4. **Passo 3 – Pazienti positivi**
-   - La tabella si riempie in tempo reale con Cognome, SDO, numero di PDF
-     positivi e termini trovati.
-   - **Clicca su una riga** per vedere il nome della cartella e l'elenco dei PDF
-     (giornate) positivi; **clicca sul nome di un PDF per aprirlo** in una nuova
-     scheda.
+   - Tabella con Cognome, SDO, **Prima assunzione**, numero di PDF positivi e
+     termini trovati.
+   - **Prima assunzione** = il giorno **precedente** alla creazione del PDF
+     positivo più vecchio (il PDF viene generato alle 7 del mattino del giorno
+     dopo, quindi la giornata documentata è quella prima).
+   - **Clicca su una riga** per vedere la cartella, la prima data di assunzione e
+     l'elenco dei PDF positivi con la rispettiva data; **clicca sul nome di un
+     PDF** per aprirlo.
    - Con **"Esporta risultati (CSV)"** salvi l'elenco (apribile in Excel).
 
 ### Consigli con tante cartelle (es. 4000+ cartelle su disco di rete)
@@ -71,13 +69,15 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
 
 | Richiesta | Come funziona |
 |---|---|
+| **Verifica elenco SDO** (trovati / non trovati) | Passo 1: confronta il tuo elenco con le cartelle e mostra/esporta gli SDO trovati e quelli mancanti. |
+| **Prima data di assunzione** | Giorno precedente alla creazione del PDF positivo più vecchio (PDF generato alle 7 del giorno dopo). I PDF di ogni paziente vengono ordinati per data, così la prima positività è la più vecchia. |
 | Una o due cartelle (mediche / infermieristiche) | Selettore di modalità; con due cartelle i pazienti con lo stesso SDO vengono uniti. |
-| Barra di avanzamento al caricamento | Mostrata durante la lettura dei PDF. |
+| Barra di avanzamento | Mostrata durante la lettura dei PDF, con risultati in tempo reale. |
 | Ricerca AND / OR | OR = almeno un termine; AND = tutti i termini nello stesso PDF. |
 | Ignora maiuscole/minuscole | Sempre attivo. |
 | Errore di scrittura fino a 2 lettere | Distanza di *Levenshtein* (regolabile 0–2). |
 | Fermarsi alla prima positività o leggere tutto | Opzione "Fermati al primo PDF positivo per paziente". |
-| Filtro per numero di SDO | Campo dove incollare gli SDO (cartelle `COGNOME_SDO`). |
+| Ricerca limitata all'elenco di SDO | La ricerca usa l'elenco del passo 1 (vuoto = tutti). |
 | Lista dei positivi con collegamento | Tabella + apertura diretta dei PDF positivi + esportazione CSV. |
 
 ---
@@ -92,6 +92,10 @@ ricovero). Le cartelle hanno nome **`COGNOME_SDO`** (es. `ROSSI_12345`).
   (esempio reale: `Daily` → `Abatiello_2118001262` → i PDF delle giornate).
   L'SDO è la parte dopo l'ultimo trattino basso `_`, quindi funzionano anche i
   cognomi con spazi (`Afeworki Berhe_2124016976`) o con più `_` (`DE_LUCA_999`).
+- La **data di creazione del PDF** usata per la "prima data di assunzione" è la
+  data di ultima modifica del file (`lastModified`), che per un PDF generato e
+  mai più toccato coincide con la creazione. Se i file fossero stati copiati in
+  modo da perdere la data originale, questo valore potrebbe non essere corretto.
 - Tutto avviene in locale nel browser; con molti PDF la prima indicizzazione può
   richiedere un po' di tempo, ma poi la ricerca è immediata.
 
